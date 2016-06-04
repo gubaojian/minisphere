@@ -72,9 +72,6 @@
     <ClCompile Include="..\src\engine\input.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\engine\logger.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\engine\map_engine.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -201,9 +198,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\engine\input.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\engine\logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\engine\map_engine.h">

@@ -12,7 +12,6 @@
 #include "galileo.h"
 #include "image.h"
 #include "input.h"
-#include "logger.h"
 #include "map_engine.h"
 #include "rng.h"
 #include "shader.h"
@@ -171,7 +170,6 @@ initialize_api(duk_context* ctx)
 	init_galileo_api();
 	init_image_api(g_duk);
 	init_input_api();
-	init_logging_api();
 	init_map_engine_api(g_duk);
 	init_rng_api();
 	init_screen_api();
