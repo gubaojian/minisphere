@@ -2,7 +2,6 @@
 #include "audio.h"
 
 #include "api.h"
-#include "bytearray.h"
 
 static duk_ret_t js_GetDefaultMixer            (duk_context* ctx);
 static duk_ret_t js_Mixer_get_Default          (duk_context* ctx);

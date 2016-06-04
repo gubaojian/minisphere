@@ -2,7 +2,6 @@
 #include "sockets.h"
 
 #include "api.h"
-#include "bytearray.h"
 
 static void on_dyad_accept  (dyad_Event* e);
 static void on_dyad_receive (dyad_Event* e);
@@ -556,49 +555,45 @@ js_Socket_close(duk_context* ctx)
 static duk_ret_t
 js_Socket_read(duk_context* ctx)
 {
-	int length = duk_require_int(ctx, 0);
-
-	bytearray_t* array;
-	void*        read_buffer;
+	void*        buffer;
+	int          num_bytes;
 	socket_t*    socket;
 
 	duk_push_this(ctx);
 	socket = duk_require_sphere_obj(ctx, -1, "Socket");
-	duk_pop(ctx);
-	if (length <= 0)
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Socket:read(): must read at least 1 byte (got: %i)", length);
+	num_bytes = duk_require_int(ctx, 0);
+
+	if (num_bytes < 0)
+		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "read size cannot be negative");
 	if (socket == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:read(): socket has been closed");
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "socket is closed");
 	if (!is_socket_live(socket))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:read(): socket is not connected");
-	if (!(read_buffer = malloc(length)))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:read(): unable to allocate read buffer");
-	read_socket(socket, read_buffer, length);
-	if (!(array = bytearray_from_buffer(read_buffer, length)))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:read(): unable to create byte array");
-	duk_push_sphere_bytearray(ctx, array);
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "socket is disconnected");
+	buffer = duk_push_fixed_buffer(ctx, num_bytes);
+	read_socket(socket, buffer, num_bytes);
+	duk_push_buffer_object(ctx, -1, 0, num_bytes, DUK_BUFOBJ_ARRAYBUFFER);
 	return 1;
 }
 
 static duk_ret_t
 js_Socket_readString(duk_context* ctx)
 {
-	size_t length = duk_require_uint(ctx, 0);
-
 	uint8_t*  buffer;
+	size_t    num_bytes;
 	socket_t* socket;
 
 	duk_push_this(ctx);
 	socket = duk_require_sphere_obj(ctx, -1, "Socket");
-	duk_pop(ctx);
+	num_bytes = duk_require_uint(ctx, 0);
+
 	if (socket == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:readString(): socket has been closed");
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "socket is closed");
 	if (!is_socket_live(socket))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:readString(): socket is not connected");
-	if (!(buffer = malloc(length)))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:readString(): unable to allocate read buffer");
-	read_socket(socket, buffer, length);
-	duk_push_lstring(ctx, (char*)buffer, length);
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "socket is disconnected");
+	if (!(buffer = malloc(num_bytes)))
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to allocate read buffer");
+	read_socket(socket, buffer, num_bytes);
+	duk_push_lstring(ctx, (char*)buffer, num_bytes);
 	free(buffer);
 	return 1;
 }
@@ -606,25 +601,21 @@ js_Socket_readString(duk_context* ctx)
 static duk_ret_t
 js_Socket_write(duk_context* ctx)
 {
-	bytearray_t*   array;
 	const uint8_t* payload;
 	socket_t*      socket;
 	size_t         write_size;
 
 	duk_push_this(ctx);
 	socket = duk_require_sphere_obj(ctx, -1, "Socket");
-	duk_pop(ctx);
 	if (duk_is_string(ctx, 0))
 		payload = (uint8_t*)duk_get_lstring(ctx, 0, &write_size);
-	else {
-		array = duk_require_sphere_bytearray(ctx, 0);
-		payload = get_bytearray_buffer(array);
-		write_size = get_bytearray_size(array);
-	}
+	else
+		payload = duk_require_buffer_data(ctx, 0, &write_size);
+	
 	if (socket == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:write(): socket has been closed");
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "socket is closed");
 	if (!is_socket_live(socket))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Socket:write(): socket is not connected");
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "socket is not connected");
 	write_socket(socket, payload, write_size);
 	return 0;
 }

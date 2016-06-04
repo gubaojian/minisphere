@@ -3,7 +3,6 @@
 
 #include "async.h"
 #include "audio.h"
-#include "bytearray.h"
 #include "color.h"
 #include "commonjs.h"
 #include "console.h"
@@ -164,7 +163,6 @@ initialize_api(duk_context* ctx)
 	// initialize subsystem APIs
 	init_async_api();
 	init_audio_api();
-	init_bytearray_api();
 	init_color_api();
 	init_commonjs_api();
 	init_console_api();

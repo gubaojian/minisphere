@@ -379,7 +379,6 @@ xcopy /y /d /e /f "..\docs\*-api.txt" "$(OutDir)documentation\"</Command>
     <ClCompile Include="..\src\engine\async.c" />
     <ClCompile Include="..\src\engine\atlas.c" />
     <ClCompile Include="..\src\engine\audio.c" />
-    <ClCompile Include="..\src\engine\bytearray.c" />
     <ClCompile Include="..\src\engine\color.c" />
     <ClCompile Include="..\src\engine\console.c" />
     <ClCompile Include="..\src\engine\debugger.c" />
@@ -424,7 +423,6 @@ xcopy /y /d /e /f "..\docs\*-api.txt" "$(OutDir)documentation\"</Command>
     <ClInclude Include="..\src\engine\async.h" />
     <ClInclude Include="..\src\engine\atlas.h" />
     <ClInclude Include="..\src\engine\audio.h" />
-    <ClInclude Include="..\src\engine\bytearray.h" />
     <ClInclude Include="..\src\engine\color.h" />
     <ClInclude Include="..\src\engine\console.h" />
     <ClInclude Include="..\src\engine\debugger.h" />
