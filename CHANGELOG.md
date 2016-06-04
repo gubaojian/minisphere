@@ -1,6 +1,13 @@
 minisphere Changelog
 ====================
 
+v4.0.0 - TBD
+------------
+
+* minisphere no longer performs TypeScript and CoffeeScript transpilation.
+  This must now be done ahead of time in a separate build step.
+
+
 v3.3.0 - May 31, 2016
 ---------------------
 

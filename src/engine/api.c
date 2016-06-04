@@ -21,7 +21,6 @@
 #include "sockets.h"
 #include "spriteset.h"
 #include "surface.h"
-#include "transpile.h"
 #include "windowstyle.h"
 
 #define SPHERE_API_VERSION 2.0

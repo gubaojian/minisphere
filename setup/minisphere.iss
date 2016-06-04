@@ -8,8 +8,7 @@
 
 #define AppName "minisphere"
 #define AppPublisher "Fat Cerberus"
-#define AppVersion2 "3.3"
-#define AppVersion3 "3.3.0"
+#define AppVersion "4.0a0"
 
 ; to create a bundle with Sphere Studio, copy the Sphere Studio binaries
 ; into msw/ide/ before building the installer.
@@ -18,12 +17,12 @@
 #endif
 
 [Setup]
-OutputBaseFilename=minisphereSetup-{#AppVersion3}
+OutputBaseFilename=minisphereSetup-{#AppVersion}
 OutputDir=.
 AppId={{10C19C9F-1E29-45D8-A534-8FEF98C7C2FF}
 AppName={#AppName}
-AppVerName={#AppName} {#AppVersion3}
-AppVersion={#AppVersion3}
+AppVerName={#AppName} {#AppVersion}
+AppVersion={#AppVersion}
 AppPublisher=Fat Cerberus
 AppUpdatesURL=http://forums.spheredev.org/index.php/topic,1215.0.html
 AppCopyright=© 2015-2016 Fat Cerberus
@@ -41,7 +40,7 @@ InfoAfterFile=release.rtf
 LicenseFile=../LICENSE.txt
 SetupIconFile=..\msvs\spherical.ico
 SolidCompression=yes
-UninstallDisplayName={#AppName} {#AppVersion3}
+UninstallDisplayName={#AppName} {#AppVersion}
 UninstallDisplayIcon={app}\minisphere.exe,0
 
 [Languages]
@@ -53,7 +52,7 @@ Name: "developer"; Description: "Spherical Game Development Kit (minisphere Cons
 Name: "custom"; Description: "Custom Installation"; Flags: iscustom
 
 [Components]
-Name: "engine"; Description: "{#AppName} {#AppVersion3} JavaScript Game Engine [Required]"; Types: normal developer custom; Flags: fixed
+Name: "engine"; Description: "{#AppName} {#AppVersion} JavaScript game engine [Required]"; Types: normal developer custom; Flags: fixed
 Name: "spherun"; Description: "Spherical GDK / minisphere Console"; Types: developer; Flags: checkablealone
 #ifdef HAVE_SPHERE_STUDIO
 Name: "spherun/ide"; Description: "Sphere Studio - the Sphere development environment"; Types: developer

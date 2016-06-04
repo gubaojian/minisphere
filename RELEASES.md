@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+minisphere 4.0
+--------------
+
+* TypeScript and CoffeeScript transpilation is no longer performed by the
+  engine.  If your game includes code written in either of these languages, the
+  transpilation must now be done in a separate build step, perhaps as part of
+  your game's Cellscript.
+
+
 minisphere 3.3
 --------------
 

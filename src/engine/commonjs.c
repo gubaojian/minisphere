@@ -2,7 +2,6 @@
 #include "commonjs.h"
 
 #include "api.h"
-#include "transpile.h"
 
 static duk_ret_t js_require (duk_context* ctx);
 
@@ -52,10 +51,6 @@ cjs_eval_module(const char* filename)
 	source = sfs_fslurp(g_fs, filename, NULL, &source_size);
 	code_string = lstr_from_buf(source, source_size);
 	free(source);
-	if (!transpile_to_js(&code_string, filename)) {
-		lstr_free(code_string);
-		return false;
-	}
 
 	// construct a module object for the new module
 	duk_push_object(g_duk);  // module object
