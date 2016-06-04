@@ -1,6 +1,5 @@
 #include "minisphere.h"
 
-#include <libmng.h>
 #include <zlib.h>
 #include "api.h"
 #include "async.h"
@@ -615,8 +614,8 @@ print_banner(bool want_copyright, bool want_deps)
 			(al_version_id & 0xFF) - 1);
 		duk_version = strnewf("%ld.%ld.%ld", DUK_VERSION / 10000, DUK_VERSION / 100 % 100, DUK_VERSION % 100);
 		printf("\n");
-		printf("    Allegro: v%-8s  libmng: v%s\n", al_version, mng_version_text());
-		printf("    Duktape: v%-8s    zlib: v%s\n", duk_version, zlibVersion());
+		printf("    Allegro: v%-8s    zlib: v%s\n", al_version, zlibVersion());
+		printf("    Duktape: v%-8s\n", duk_version);
 		printf("     Dyad.c: v%-8s\n", dyad_getVersion());
 		free(al_version);
 		free(duk_version);

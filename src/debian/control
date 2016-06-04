@@ -10,7 +10,6 @@ Build-Depends:
  liballegro-acodec5-dev (>= 5.0.0),
  liballegro-dialog5-dev (>= 5.0.0),
  liballegro-image5-dev (>= 5.0.0),
- libmng-dev (>= 1.0.10),
  zlib1g-dev (>= 1.2.3)
 
 Package: minisphere

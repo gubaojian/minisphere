@@ -1,7 +1,6 @@
 #include "minisphere.h"
 #include "api.h"
 
-#include "animation.h"
 #include "async.h"
 #include "audio.h"
 #include "bytearray.h"
@@ -163,7 +162,6 @@ initialize_api(duk_context* ctx)
 	api_register_method(ctx, NULL, "UnskipFrame", js_UnskipFrame);
 
 	// initialize subsystem APIs
-	init_animation_api();
 	init_async_api();
 	init_audio_api();
 	init_bytearray_api();

@@ -4,9 +4,9 @@ minisphere Changelog
 v4.0.0 - TBD
 ------------
 
-* minisphere no longer performs TypeScript and CoffeeScript transpilation.
-  This must now be done ahead of time in a separate build step.
-
+* The Sphere 1.x Animation (MNG) API is no longer supported.
+* The engine no longer performs automatic TypeScript and CoffeeScript
+  transpilation.
 
 v3.3.0 - May 31, 2016
 ---------------------
