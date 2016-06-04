@@ -24,8 +24,6 @@ int             get_image_height         (const image_t* image);
 color_t         get_image_pixel          (image_t* image, int x, int y);
 int             get_image_width          (const image_t* image);
 void            set_image_pixel          (image_t* image, int x, int y, color_t color);
-bool            apply_color_matrix       (image_t* image, colormatrix_t matrix, int x, int y, int width, int height);
-bool            apply_color_matrix_4     (image_t* image, colormatrix_t ul_mat, colormatrix_t ur_mat, colormatrix_t ll_mat, colormatrix_t lr_mat, int x, int y, int width, int height);
 bool            apply_image_lookup       (image_t* image, int x, int y, int width, int height, uint8_t red_lu[256], uint8_t green_lu[256], uint8_t blue_lu[256], uint8_t alpha_lu[256]);
 void            blit_image               (image_t* image, image_t* target_image, int x, int y);
 void            draw_image               (image_t* image, int x, int y);

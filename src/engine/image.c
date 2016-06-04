@@ -290,66 +290,6 @@ set_image_pixel(image_t* image, int x, int y, color_t color)
 }
 
 bool
-apply_color_matrix(image_t* image, colormatrix_t matrix, int x, int y, int width, int height)
-{
-	image_lock_t* lock;
-	color_t*      pixel;
-
-	int i_x, i_y;
-
-	if (!(lock = lock_image(image)))
-		return false;
-	uncache_pixels(image);
-	for (i_x = x; i_x < x + width; ++i_x) for (i_y = y; i_y < y + height; ++i_y) {
-		pixel = &lock->pixels[i_x + i_y * lock->pitch];
-		*pixel = color_transform(*pixel, matrix);
-	}
-	unlock_image(image, lock);
-	return true;
-}
-
-bool
-apply_color_matrix_4(image_t* image, colormatrix_t ul_mat, colormatrix_t ur_mat, colormatrix_t ll_mat, colormatrix_t lr_mat, int x, int y, int w, int h)
-{
-	// this function might be difficult to understand at first. the implementation
-	// is, however, much easier to follow than the one in Sphere. basically what it
-	// boils down to is bilinear interpolation, but with matrices. it's much more
-	// straightforward than it sounds.
-	
-	int           i1, i2;
-	image_lock_t* lock;
-	colormatrix_t mat_1, mat_2, mat_3;
-	color_t*      pixel;
-
-	int i_x, i_y;
-
-	if (!(lock = lock_image(image)))
-		return false;
-	uncache_pixels(image);
-	for (i_y = y; i_y < y + h; ++i_y) {
-		// thankfully, we don't have to do a full bilinear interpolation every frame.
-		// two thirds of the work is done in the outer loop, giving us two color matrices
-		// which we then use in the inner loop to calculate the transforms for individual
-		// pixels.
-		i1 = y + h - 1 - i_y;
-		i2 = i_y - y;
-		mat_1 = colormatrix_lerp(ul_mat, ll_mat, i1, i2);
-		mat_2 = colormatrix_lerp(ur_mat, lr_mat, i1, i2);
-		for (i_x = x; i_x < x + w; ++i_x) {
-			// calculate the final matrix for this pixel and transform it
-			i1 = x + w - 1 - i_x;
-			i2 = i_x - x;
-			mat_3 = colormatrix_lerp(mat_1, mat_2, i1, i2);
-			pixel = &lock->pixels[i_x + i_y * lock->pitch];
-			*pixel = color_transform(*pixel, mat_3);
-
-		}
-	}
-	unlock_image(image, lock);
-	return true;
-}
-
-bool
 apply_image_lookup(image_t* image, int x, int y, int width, int height, uint8_t red_lu[256], uint8_t green_lu[256], uint8_t blue_lu[256], uint8_t alpha_lu[256])
 {
 	ALLEGRO_BITMAP*        bitmap = get_image_bitmap(image);

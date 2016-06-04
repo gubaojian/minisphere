@@ -22,8 +22,6 @@ static duk_ret_t js_Surface_getPixel          (duk_context* ctx);
 static duk_ret_t js_Surface_setAlpha          (duk_context* ctx);
 static duk_ret_t js_Surface_setBlendMode      (duk_context* ctx);
 static duk_ret_t js_Surface_setPixel          (duk_context* ctx);
-static duk_ret_t js_Surface_applyColorFX      (duk_context* ctx);
-static duk_ret_t js_Surface_applyColorFX4     (duk_context* ctx);
 static duk_ret_t js_Surface_applyLookup       (duk_context* ctx);
 static duk_ret_t js_Surface_blit              (duk_context* ctx);
 static duk_ret_t js_Surface_blitMaskSurface   (duk_context* ctx);
@@ -75,8 +73,6 @@ init_surface_api(void)
 	api_register_method(g_duk, "Surface", "setAlpha", js_Surface_setAlpha);
 	api_register_method(g_duk, "Surface", "setBlendMode", js_Surface_setBlendMode);
 	api_register_method(g_duk, "Surface", "setPixel", js_Surface_setPixel);
-	api_register_method(g_duk, "Surface", "applyColorFX", js_Surface_applyColorFX);
-	api_register_method(g_duk, "Surface", "applyColorFX4", js_Surface_applyColorFX4);
 	api_register_method(g_duk, "Surface", "applyLookup", js_Surface_applyLookup);
 	api_register_method(g_duk, "Surface", "blit", js_Surface_blit);
 	api_register_method(g_duk, "Surface", "blitMaskSurface", js_Surface_blitMaskSurface);
@@ -312,56 +308,6 @@ js_Surface_getPixel(duk_context* ctx)
 }
 
 static duk_ret_t
-js_Surface_applyColorFX(duk_context* ctx)
-{
-	colormatrix_t matrix;
-	int           height;
-	int           width;
-	int           x;
-	int           y;
-
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_obj(ctx, -1, "Surface");
-	x = duk_require_int(ctx, 0);
-	y = duk_require_int(ctx, 1);
-	width = duk_require_int(ctx, 2);
-	height = duk_require_int(ctx, 3);
-	matrix = duk_require_sphere_colormatrix(ctx, 4);
-
-	if (x < 0 || y < 0 || x + width > get_image_width(image) || y + height > get_image_height(image))
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Surface:applyColorFX(): area of effect extends past image (%i,%i,%i,%i)", x, y, width, height);
-	if (!apply_color_matrix(image, matrix, x, y, width, height))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Surface:applyColorFX(): unable to apply transformation");
-	return 0;
-}
-
-static duk_ret_t
-js_Surface_applyColorFX4(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	int w = duk_require_int(ctx, 2);
-	int h = duk_require_int(ctx, 3);
-	colormatrix_t ul_mat = duk_require_sphere_colormatrix(ctx, 4);
-	colormatrix_t ur_mat = duk_require_sphere_colormatrix(ctx, 5);
-	colormatrix_t ll_mat = duk_require_sphere_colormatrix(ctx, 6);
-	colormatrix_t lr_mat = duk_require_sphere_colormatrix(ctx, 7);
-
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_obj(ctx, -1, "Surface");
-
-	if (x < 0 || y < 0 || x + w > get_image_width(image) || y + h > get_image_height(image))
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Surface:applyColorFX4(): area of effect extends past image (%i,%i,%i,%i)", x, y, w, h);
-	if (!apply_color_matrix_4(image, ul_mat, ur_mat, ll_mat, lr_mat, x, y, w, h))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Surface:applyColorFX4(): unable to apply transformation");
-	return 0;
-}
-
-static duk_ret_t
 js_Surface_applyLookup(duk_context* ctx)
 {
 	int x = duk_require_int(ctx, 0);
@@ -379,7 +325,7 @@ js_Surface_applyLookup(duk_context* ctx)
 	image = duk_require_sphere_obj(ctx, -1, "Surface");
 
 	if (x < 0 || y < 0 || x + w > get_image_width(image) || y + h > get_image_height(image))
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Surface:applyColorFX(): area of effect extends past image (%i,%i,%i,%i)", x, y, w, h);
+		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Surface:applyLookup(): area of effect extends past image (%i,%i,%i,%i)", x, y, w, h);
 	if (!apply_image_lookup(image, x, y, w, h, red_lu, green_lu, blue_lu, alpha_lu))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Surface:applyLookup(): unable to apply lookup transformation");
 	free(red_lu);
