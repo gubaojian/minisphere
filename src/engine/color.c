@@ -158,7 +158,6 @@ static const struct x11_color X11_COLOR[] =
 	{ NULL, 0, 0, 0, 0 }
 };
 
-static duk_ret_t js_CreateColor          (duk_context* ctx);
 static duk_ret_t js_Color_get_Color      (duk_context* ctx);
 static duk_ret_t js_Color_mix            (duk_context* ctx);
 static duk_ret_t js_Color_of             (duk_context* ctx);
@@ -174,19 +173,7 @@ nativecolor(color_t color)
 }
 
 color_t
-color_new(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha)
-{
-	color_t color;
-
-	color.r = r;
-	color.g = g;
-	color.b = b;
-	color.alpha = alpha;
-	return color;
-}
-
-color_t
-color_lerp(color_t color, color_t other, float w1, float w2)
+color_mix(color_t color, color_t other, float w1, float w2)
 {
 	color_t blend;
 	float   sigma;
@@ -197,6 +184,18 @@ color_lerp(color_t color, color_t other, float w1, float w2)
 	blend.b = (color.b * w1 + other.b * w2) / sigma;
 	blend.alpha = (color.alpha * w1 + other.alpha * w2) / sigma;
 	return blend;
+}
+
+color_t
+color_new(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha)
+{
+	color_t color;
+
+	color.r = r;
+	color.g = g;
+	color.b = b;
+	color.alpha = alpha;
+	return color;
 }
 
 void
@@ -289,7 +288,7 @@ js_Color_mix(duk_context* ctx)
 	if (w1 < 0.0 || w2 < 0.0)
 		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "weights cannot be negative", w1, w2);
 	
-	duk_push_sphere_color(ctx, color_lerp(color1, color2, w1, w2));
+	duk_push_sphere_color(ctx, color_mix(color1, color2, w1, w2));
 	return 1;
 }
 
@@ -329,12 +328,6 @@ js_Color_of(duk_context* ctx)
 	color.b = value & 0xFF;
 	duk_push_sphere_color(ctx, color);
 	return 1;
-}
-
-static duk_ret_t
-js_CreateColor(duk_context* ctx)
-{
-	return js_new_Color(ctx);
 }
 
 static duk_ret_t

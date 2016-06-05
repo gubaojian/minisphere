@@ -6,11 +6,11 @@
 
 static duk_ret_t js_RNG_get_state (duk_context* ctx);
 static duk_ret_t js_RNG_set_state (duk_context* ctx);
-static duk_ret_t js_RNG_reseed      (duk_context* ctx);
 static duk_ret_t js_RNG_chance    (duk_context* ctx);
 static duk_ret_t js_RNG_normal    (duk_context* ctx);
 static duk_ret_t js_RNG_random    (duk_context* ctx);
 static duk_ret_t js_RNG_range     (duk_context* ctx);
+static duk_ret_t js_RNG_reseed    (duk_context* ctx);
 static duk_ret_t js_RNG_sample    (duk_context* ctx);
 static duk_ret_t js_RNG_string    (duk_context* ctx);
 static duk_ret_t js_RNG_uniform   (duk_context* ctx);

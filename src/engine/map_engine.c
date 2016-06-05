@@ -1422,7 +1422,7 @@ update_map_engine(bool is_main_loop)
 	// update color mask fade level
 	if (s_fade_progress < s_fade_frames) {
 		++s_fade_progress;
-		s_color_mask = color_lerp(s_fade_color_to, s_fade_color_from,
+		s_color_mask = color_mix(s_fade_color_to, s_fade_color_from,
 			s_fade_progress, s_fade_frames - s_fade_progress);
 	}
 	

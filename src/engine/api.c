@@ -25,22 +25,7 @@
 
 static const char* const SPHERE_EXTENSIONS[] =
 {
-	"sphere-legacy-api",
-	"sphere-obj-constructors",
-	"sphere-obj-props",
-	"sphere-async-api",
-	"sphere-audialis",
-	"sphere-coffeescript",
-	"sphere-commonjs",
-	"sphere-frameskip-api",
-	"sphere-galileo",
-	"sphere-galileo-shaders",
-	"sphere-map-engine",
-	"sphere-new-sockets",
-	"sphere-rng-object",
-	"sphere-s2gm",
-	"sphere-spherefs",
-	"sphere-typescript",
+	"sphere_fs_system_alias",
 };
 
 static duk_ret_t js_GetVersion           (duk_context* ctx);
@@ -66,14 +51,11 @@ static duk_ret_t js_Abort                (duk_context* ctx);
 static duk_ret_t js_Alert                (duk_context* ctx);
 static duk_ret_t js_Assert               (duk_context* ctx);
 static duk_ret_t js_CreateStringFromCode (duk_context* ctx);
-static duk_ret_t js_DebugPrint           (duk_context* ctx);
 static duk_ret_t js_Delay                (duk_context* ctx);
 static duk_ret_t js_DoEvents             (duk_context* ctx);
 static duk_ret_t js_ExecuteGame          (duk_context* ctx);
 static duk_ret_t js_Exit                 (duk_context* ctx);
 static duk_ret_t js_FlipScreen           (duk_context* ctx);
-static duk_ret_t js_GarbageCollect       (duk_context* ctx);
-static duk_ret_t js_Print                (duk_context* ctx);
 static duk_ret_t js_RestartGame          (duk_context* ctx);
 static duk_ret_t js_UnskipFrame          (duk_context* ctx);
 
@@ -148,14 +130,11 @@ initialize_api(duk_context* ctx)
 	api_register_method(ctx, NULL, "Alert", js_Alert);
 	api_register_method(ctx, NULL, "Assert", js_Assert);
 	api_register_method(ctx, NULL, "CreateStringFromCode", js_CreateStringFromCode);
-	api_register_method(ctx, NULL, "DebugPrint", js_DebugPrint);
 	api_register_method(ctx, NULL, "Delay", js_Delay);
 	api_register_method(ctx, NULL, "DoEvents", js_DoEvents);
 	api_register_method(ctx, NULL, "Exit", js_Exit);
 	api_register_method(ctx, NULL, "ExecuteGame", js_ExecuteGame);
 	api_register_method(ctx, NULL, "FlipScreen", js_FlipScreen);
-	api_register_method(ctx, NULL, "GarbageCollect", js_GarbageCollect);
-	api_register_method(ctx, NULL, "Print", js_Print);
 	api_register_method(ctx, NULL, "RestartGame", js_RestartGame);
 	api_register_method(ctx, NULL, "UnskipFrame", js_UnskipFrame);
 
@@ -876,22 +855,6 @@ js_CreateStringFromCode(duk_context* ctx)
 }
 
 static duk_ret_t
-js_DebugPrint(duk_context* ctx)
-{
-	int num_items;
-
-	num_items = duk_get_top(ctx);
-
-	// separate printed values with a space
-	duk_push_string(ctx, " ");
-	duk_insert(ctx, 0);
-	duk_join(ctx, num_items);
-
-	debug_print(duk_get_string(ctx, -1), PRINT_NORMAL);
-	return 0;
-}
-
-static duk_ret_t
 js_Delay(duk_context* ctx)
 {
 	double millisecs = floor(duk_require_number(ctx, 0));
@@ -941,30 +904,6 @@ static duk_ret_t
 js_FlipScreen(duk_context* ctx)
 {
 	screen_flip(g_screen, g_framerate);
-	return 0;
-}
-
-static duk_ret_t
-js_GarbageCollect(duk_context* ctx)
-{
-	duk_gc(ctx, 0x0);
-	duk_gc(ctx, 0x0);
-	return 0;
-}
-
-static duk_ret_t
-js_Print(duk_context* ctx)
-{
-	int num_items;
-
-	num_items = duk_get_top(ctx);
-
-	// separate printed values with a space
-	duk_push_string(ctx, " ");
-	duk_insert(ctx, 0);
-	duk_join(ctx, num_items);
-
-	printf("%s\n", duk_get_string(ctx, -1));
 	return 0;
 }
 
