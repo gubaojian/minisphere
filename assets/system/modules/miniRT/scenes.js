@@ -690,7 +690,7 @@ scenes.scenelet('playSound',
 {
 	start: function(scene, fileName) {
 		this.sound = new Sound(fileName);
-		this.sound.play(false);
+		this.sound.play(Mixer.Default);
 		return true;
 	},
 	update: function(scene) {

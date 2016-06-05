@@ -12,7 +12,6 @@ const link    = require('link');
 const scenes  = require('./scenes');
 const threads = require('./threads');
 
-var console =
 module.exports = (function() {
 	var game = GetGameManifest();
 
@@ -27,8 +26,6 @@ module.exports = (function() {
 	var bufferSize = 1000;
 	var prompt = "$";
 
-	var logger = typeof logFileName === 'string'
-		? new Logger(logFileName) : null;
 	var buffer = [];
 	var commands = [];
 	var entry = "";
@@ -274,9 +271,7 @@ module.exports = (function() {
 	{
 		if (nextLine > 0) {
 			var lineText = buffer[(nextLine - 1) % bufferSize];
-			DebugPrint(lineText.substr(1));
-			if (logger !== null)
-				logger.write(lineText);
+			console.log(lineText.substr(1));
 		}
 		var lineInBuffer = nextLine % bufferSize;
 		buffer[lineInBuffer] = ">" + text;

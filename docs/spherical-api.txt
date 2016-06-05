@@ -1197,11 +1197,10 @@ Font:drawTextBox(x, y, width, height, x_offset, text);
 Audialis Sound Routines
 -----------------------
 
-Playing sounds and music are both handled in minisphere by Audialis, the
-evolution of Sphere 1.x's audio subsystem.  Audialis allows you to create mixers
-which can be used to adjust certain parameters across all sounds associated with
-that mixer.  This is useful for implementing global volume controls, for
-example.
+minisphere implements Audialis, the evolution of Sphere 1.x's audio subsystem.
+Audialis allows you to create mixers which can be used to adjust certain
+parameters across all sounds associated with that mixer.  This is useful for
+implementing global volume controls, for example.
 
 Mixer.Default [read-only]
 
@@ -1227,33 +1226,26 @@ Mixer:volume [read/write]
 
 new Sound(filename);
 
-    SphereFS compliant.
-
     Constructs a Sound object from the specified audio file.  Supported sound
-    formats are Ogg Vorbis (.ogg), WAV, MOD, S3M, IT, and FLAC.  minisphere does
-    not support mp3 or MIDI.
-
-Sound:playing [read-only]
-
-    true if the sound is currently playing, false otherwise.
+    formats are Ogg Vorbis (.ogg), WAV, MOD, S3M, IT, and FLAC.  minisphere
+    does not support mp3 or MIDI.
 
 Sound:length [read-only]
 
-    Gets the length of the sound in microseconds.
+    Gets the length of the sound in seconds.
 
 Sound:pan [read/write]
 
     Gets or sets the current pan (balance). 0.0 is dead center, -1.0 is full
     left, and 1.0 is full right.
 
-Sound:pitch [read/write]
+Sound:playing [read-only]
 
-    Gets the current relative pitch of the sound. 1.0 is normal.  Note that this
-    is not a true pitch adjustment: the playback speed will be altered.
+    true if the sound is currently playing, false otherwise.
 
 Sound:position [read/write]
 
-    Gets or sets the playback position within the sound, in microseconds.
+    Gets or sets the playback position within the sound in seconds.
 
 Sound:repeat [read/write]
 
@@ -1265,6 +1257,11 @@ Sound:seekable [read-only]
     Gets or sets whether the sound is seekable.  Currently all supported formats
     are seekable, so this will always be true.
 
+Sound:speed [read/write]
+
+    Gets the current playback speed of the sound.  0.5 is half speed, 1.0 is
+    normal, 2.0 is double, etc.
+
 Sound:volume [read/write]
 
     Gets or sets the current volume of the sound.  0.0 is silent, 1.0 is full
@@ -1275,30 +1272,16 @@ Sound:pause();
 
     Pauses the sound.  If it is already paused, this has no effect.
 
-Sound:play([mixer, ][is_looping]);
+Sound:play([mixer]);
 
-    Begins or resumes sound playback. The semantics of this function are a bit
-    counterintuitive, but match the behavior of Sphere 1.5.  When called with no
-    arguments, Sound:play() resumes a paused sound.  Otherwise, the sound is
-    restarted from the beginning (even if it was already playing).  If
-    `is_looping` is true, the sound will automatically repeat when playback
-    ends.
-
-    `mixer`, if provided, specifies the mixer which will be used to play the
-    sound.  If no mixer is specified, the built-in stereo mixer will be used.
-    See `Mixer.Default` above.
-
-Sound:reset();
-
-    Seeks to the beginning of the stream.  Playback state is not altered; if the
-    sound is playing at the time of this call, it simply starts over from the
-    beginning.  Essentially, this has the same effect as setting Sound:position
-    to zero.
+    Begins or resumes sound playback.
+    
+    If `mixer` is provided, plays the sound on the specified mixer.  Otherwise,
+    resumes the sound if it is currently paused.
 
 Sound:stop();
 
-    Stops the sound.  The playback position will be reset to the beginning, even
-    if the sound was not playing.
+    Stops playback and rewinds the playback position to the beginning.
 
 new SoundStream([frequency[, bits[, channels]]]);
 
@@ -1345,79 +1328,6 @@ SoundStream:write(data);
     Writes audio data to the stream buffer.  `data` is an ArrayBuffer,
     TypedArray or DataView containing the data to write.  Audio data must be fed
     into a stream continuously while it is playing to prevent interruption.
-
-
-Byte Arrays
------------
-
-A byte array is a buffer containing raw data. Byte arrays are used for both
-networking as well as in binary file I/O.  See the sections below for more
-information about those.  Byte arrays can be used like any other array, via the
-indexing operator [], however values written to the array must be numeric and
-are automatically coerced to 8-bit integers (range 0-255).
-
-As of minisphere 2.0, the ByteArray object is deprecated and has been retained
-only for backwards compatibility.  New games should use the native JavaScript
-ArrayBuffer, TypedArray, or DataView objects instead.
-
-new ByteArray(num_bytes);
-
-    Constructs a byte array which can hold 'num_bytes' of data.  A byte array
-    cannot be resized after it is created, so you will have to plan ahead to
-    choose the right size.  Note that byte arrays start out empty, with all
-    bytes set to zero.
-
-new ByteArray(string);
-
-    Constructs a byte array from the bytes of the provided string.  The size of
-    the created byte array will be the number of bytes in the string (which may
-    be greater than the string length!).
-
-ByteArray:length [read-only]
-ByteArray:size [read-only]
-
-    Gets the size of the byte array, in bytes.
-
-ByteArray:concat(byte_array);
-
-    Returns a new byte array which is the result of appending 'byte_array' to
-    the end of the one this method is called for.
-
-ByteArray:deflate([level]);
-
-    Compresses the data in the byte array using the zlib deflate algorithm and
-    returns a new ByteArray containing the compressed data. 'level' specifies
-    the relative compression level in the range [0-9].  If not provided, a
-    default level is used (usually 6).
-
-ByteArray:inflate([max_size]);
-
-    Decompresses a byte array containing deflated data.  If the byte array
-    doesn't contain valid compressed data such as generated by deflate(), an
-    error will be thrown.  `max_size` specifies the maximum size of the
-    uncompressed data.  If it is omitted, the inflate buffer will be dynamically
-    sized to fit the data.
-
-    Important: It is recommended to provide a maximum buffer size to inflate()
-               whenever possible.  Not doing so leaves your game vulnerable to
-               zip bomb-style exploits.
-
-ByteArray:resize(new_size);
-
-    Resizes the byte array to hold the specified number of bytes. The existing
-    contents are preserved to the extent possible, and if the new size is
-    larger, all additional bytes will be set to zero.
-
-ByteArray:slice(start[, end])
-
-    Returns a new byte array which is the result of copying all bytes between
-    start and end, exclusive. If 'end' is negative, it is relative to the end of
-    the byte array; if it is omitted, the entirety of the array from 'start'
-    onwards is taken.
-
-CreateStringFromByteArray(byte_array);
-
-    Builds a string from the bytes in 'byte_array'.
 
 
 Networking (Sockets)

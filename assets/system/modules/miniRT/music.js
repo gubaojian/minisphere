@@ -77,9 +77,10 @@ module.exports = (function()
 				.run();
 		}
 		if (path !== null) {
-			var stream = new Sound(path, mixer);
+			var stream = new Sound(path);
+			stream.repeat = true;
 			stream.volume = 0.0;
-			stream.play(true);
+			stream.play(mixer);
 			var fader = new scenes.Scene()
 				.tween(stream, fadeTime, 'linear', { volume: 1.0 })
 			var newSound = { stream: stream, fader: fader };
@@ -166,7 +167,6 @@ module.exports = (function()
 		currentSound = topmostSound;
 		if (currentSound !== null) {
 			currentSound.stream.volume = 0.0;
-			currentSound.stream.play();
 			currentSound.fader.stop();
 			currentSound.fader = new scenes.Scene()
 				.tween(currentSound.stream, fadeTime, 'linear', { volume: 1.0 })
@@ -204,7 +204,6 @@ module.exports = (function()
 		currentSound = topmostSound;
 		if (currentSound !== null) {
 			currentSound.stream.volume = 0.0;
-			currentSound.stream.play();
 			currentSound.fader.stop();
 			currentSound.fader = new scenes.Scene()
 				.tween(currentSound.stream, fadeTime, 'linear', { volume: 1.0 })
