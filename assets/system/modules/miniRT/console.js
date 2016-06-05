@@ -13,8 +13,6 @@ const scenes  = require('./scenes');
 const threads = require('./threads');
 
 module.exports = (function() {
-	var game = GetGameManifest();
-
 	var font = Font.Default;
 	var nextLine = 0;
 	var numLines = 0;
@@ -22,7 +20,7 @@ module.exports = (function() {
 	var wasKeyDown = false;
 
 	var numLines = Math.floor((GetScreenHeight() - 32) / font.getHeight());
-	var logFileName = 'logPath' in game ? game.logPath : null;
+	var logFileName = 'logPath' in game ? engine.game.logPath : null;
 	var bufferSize = 1000;
 	var prompt = "$";
 
@@ -42,8 +40,8 @@ module.exports = (function() {
 		getInput: getInput,
 	}, 100);
 
-	log(game.name + " [miniRT]");
-	log("Sphere " + GetVersionString());
+	log(engine.game.name + " [miniRT]");
+	log(engine.name + " " + engine.version + " (Sphere " + engine.apiVersion + "." + (engine.apiLevel - 1) + ")");
 	log("");
 
 	register('keymap', this, {

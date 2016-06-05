@@ -31,7 +31,6 @@ module.exports = (function()
 		return true;
 	};
 
-	var manifest = GetGameManifest();
 	var priority = 99;
 	var threadID = threads.create({
 		update: updateScenes,

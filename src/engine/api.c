@@ -20,7 +20,7 @@
 #include "surface.h"
 #include "windowstyle.h"
 
-#define SPHERE_API_VERSION 2.0
+#define SPHERE_API_VERSION 2
 #define SPHERE_API_LEVEL   1
 
 static const char* const SPHERE_EXTENSIONS[] =
@@ -28,36 +28,38 @@ static const char* const SPHERE_EXTENSIONS[] =
 	"sphere_fs_system_alias",
 };
 
-static duk_ret_t js_GetVersion           (duk_context* ctx);
-static duk_ret_t js_GetVersionString     (duk_context* ctx);
-static duk_ret_t js_GetExtensions        (duk_context* ctx);
-static duk_ret_t js_RequireSystemScript  (duk_context* ctx);
-static duk_ret_t js_RequireScript        (duk_context* ctx);
-static duk_ret_t js_EvaluateSystemScript (duk_context* ctx);
-static duk_ret_t js_EvaluateScript       (duk_context* ctx);
-static duk_ret_t js_IsSkippedFrame       (duk_context* ctx);
-static duk_ret_t js_GetFrameRate         (duk_context* ctx);
-static duk_ret_t js_GetGameManifest      (duk_context* ctx);
-static duk_ret_t js_GetGameList          (duk_context* ctx);
-static duk_ret_t js_GetMaxFrameSkips     (duk_context* ctx);
-static duk_ret_t js_GetScreenHeight      (duk_context* ctx);
-static duk_ret_t js_GetScreenWidth       (duk_context* ctx);
-static duk_ret_t js_GetSeconds           (duk_context* ctx);
-static duk_ret_t js_GetTime              (duk_context* ctx);
-static duk_ret_t js_SetFrameRate         (duk_context* ctx);
-static duk_ret_t js_SetMaxFrameSkips     (duk_context* ctx);
-static duk_ret_t js_SetScreenSize        (duk_context* ctx);
-static duk_ret_t js_Abort                (duk_context* ctx);
-static duk_ret_t js_Alert                (duk_context* ctx);
-static duk_ret_t js_Assert               (duk_context* ctx);
-static duk_ret_t js_CreateStringFromCode (duk_context* ctx);
-static duk_ret_t js_Delay                (duk_context* ctx);
-static duk_ret_t js_DoEvents             (duk_context* ctx);
-static duk_ret_t js_ExecuteGame          (duk_context* ctx);
-static duk_ret_t js_Exit                 (duk_context* ctx);
-static duk_ret_t js_FlipScreen           (duk_context* ctx);
-static duk_ret_t js_RestartGame          (duk_context* ctx);
-static duk_ret_t js_UnskipFrame          (duk_context* ctx);
+static duk_ret_t js_engine_get_apiLevel   (duk_context* ctx);
+static duk_ret_t js_engine_get_apiVersion (duk_context* ctx);
+static duk_ret_t js_engine_get_extensions (duk_context* ctx);
+static duk_ret_t js_engine_get_game       (duk_context* ctx);
+static duk_ret_t js_engine_get_name       (duk_context* ctx);
+static duk_ret_t js_engine_get_version    (duk_context* ctx);
+static duk_ret_t js_RequireSystemScript   (duk_context* ctx);
+static duk_ret_t js_RequireScript         (duk_context* ctx);
+static duk_ret_t js_EvaluateSystemScript  (duk_context* ctx);
+static duk_ret_t js_EvaluateScript        (duk_context* ctx);
+static duk_ret_t js_IsSkippedFrame        (duk_context* ctx);
+static duk_ret_t js_GetFrameRate          (duk_context* ctx);
+static duk_ret_t js_GetGameList           (duk_context* ctx);
+static duk_ret_t js_GetMaxFrameSkips      (duk_context* ctx);
+static duk_ret_t js_GetScreenHeight       (duk_context* ctx);
+static duk_ret_t js_GetScreenWidth        (duk_context* ctx);
+static duk_ret_t js_GetSeconds            (duk_context* ctx);
+static duk_ret_t js_GetTime               (duk_context* ctx);
+static duk_ret_t js_SetFrameRate          (duk_context* ctx);
+static duk_ret_t js_SetMaxFrameSkips      (duk_context* ctx);
+static duk_ret_t js_SetScreenSize         (duk_context* ctx);
+static duk_ret_t js_Abort                 (duk_context* ctx);
+static duk_ret_t js_Alert                 (duk_context* ctx);
+static duk_ret_t js_Assert                (duk_context* ctx);
+static duk_ret_t js_CreateStringFromCode  (duk_context* ctx);
+static duk_ret_t js_Delay                 (duk_context* ctx);
+static duk_ret_t js_DoEvents              (duk_context* ctx);
+static duk_ret_t js_ExecuteGame           (duk_context* ctx);
+static duk_ret_t js_Exit                  (duk_context* ctx);
+static duk_ret_t js_FlipScreen            (duk_context* ctx);
+static duk_ret_t js_RestartGame           (duk_context* ctx);
+static duk_ret_t js_UnskipFrame           (duk_context* ctx);
 
 static vector_t*  s_extensions;
 static lstring_t* s_user_agent;
@@ -106,17 +108,19 @@ initialize_api(duk_context* ctx)
 	duk_put_prop_string(ctx, -2, "prototypes");
 	duk_pop(ctx);
 
-	// register core API functions
-	api_register_method(ctx, NULL, "GetVersion", js_GetVersion);
-	api_register_method(ctx, NULL, "GetVersionString", js_GetVersionString);
-	api_register_method(ctx, NULL, "GetExtensions", js_GetExtensions);
+	api_register_static_prop(ctx, "engine", "apiLevel", js_engine_get_apiLevel, NULL);
+	api_register_static_prop(ctx, "engine", "apiVersion", js_engine_get_apiVersion, NULL);
+	api_register_static_prop(ctx, "engine", "extensions", js_engine_get_extensions, NULL);
+	api_register_static_prop(ctx, "engine", "game", js_engine_get_game, NULL);
+	api_register_static_prop(ctx, "engine", "name", js_engine_get_name, NULL);
+	api_register_static_prop(ctx, "engine", "version", js_engine_get_version, NULL);
+
 	api_register_method(ctx, NULL, "EvaluateScript", js_EvaluateScript);
 	api_register_method(ctx, NULL, "EvaluateSystemScript", js_EvaluateSystemScript);
 	api_register_method(ctx, NULL, "RequireScript", js_RequireScript);
 	api_register_method(ctx, NULL, "RequireSystemScript", js_RequireSystemScript);
 	api_register_method(ctx, NULL, "IsSkippedFrame", js_IsSkippedFrame);
 	api_register_method(ctx, NULL, "GetFrameRate", js_GetFrameRate);
-	api_register_method(ctx, NULL, "GetGameManifest", js_GetGameManifest);
 	api_register_method(ctx, NULL, "GetGameList", js_GetGameList);
 	api_register_method(ctx, NULL, "GetMaxFrameSkips", js_GetMaxFrameSkips);
 	api_register_method(ctx, NULL, "GetScreenHeight", js_GetScreenHeight);
@@ -484,33 +488,76 @@ duk_require_sphere_obj(duk_context* ctx, duk_idx_t index, const char* ctor_name)
 }
 
 static duk_ret_t
-js_GetVersion(duk_context* ctx)
+js_engine_get_game(duk_context* ctx)
 {
-	duk_push_number(ctx, SPHERE_API_VERSION);
+	duk_push_lstring_t(ctx, get_game_manifest(g_fs));
+	duk_json_decode(ctx, -1);
+
+	duk_push_this(ctx);
+	duk_push_string(ctx, "game");
+	duk_dup(ctx, -3);
+	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
+		| DUK_DEFPROP_CLEAR_ENUMERABLE
+		| DUK_DEFPROP_CLEAR_WRITABLE
+		| DUK_DEFPROP_SET_CONFIGURABLE);
+	duk_pop(ctx);
+
 	return 1;
 }
 
 static duk_ret_t
-js_GetVersionString(duk_context* ctx)
+js_engine_get_apiLevel(duk_context* ctx)
 {
-	duk_push_string(ctx, lstr_cstr(s_user_agent));
+	duk_push_int(ctx, SPHERE_API_LEVEL);
 	return 1;
 }
 
 static duk_ret_t
-js_GetExtensions(duk_context* ctx)
+js_engine_get_apiVersion(duk_context* ctx)
 {
-	char**  i_string;
+	duk_push_int(ctx, SPHERE_API_VERSION);
+	return 1;
+}
+
+static duk_ret_t
+js_engine_get_extensions(duk_context* ctx)
+{
+	char**  p_string;
 
 	iter_t iter;
 	int    i;
 
 	duk_push_array(ctx);
-	iter = vector_enum(s_extensions); i = 0;
-	while (i_string = vector_next(&iter)) {
-		duk_push_string(ctx, *i_string);
+	iter = vector_enum(s_extensions);
+	i = 0;
+	while (p_string = vector_next(&iter)) {
+		duk_push_string(ctx, *p_string);
 		duk_put_prop_index(ctx, -2, i++);
 	}
+
+	duk_push_this(ctx);
+	duk_push_string(ctx, "extensions");
+	duk_dup(ctx, -3);
+	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
+		| DUK_DEFPROP_CLEAR_ENUMERABLE
+		| DUK_DEFPROP_CLEAR_WRITABLE
+		| DUK_DEFPROP_SET_CONFIGURABLE);
+	duk_pop(ctx);
+
+	return 1;
+}
+
+static duk_ret_t
+js_engine_get_name(duk_context* ctx)
+{
+	duk_push_string(ctx, PRODUCT_NAME);
+	return 1;
+}
+
+static duk_ret_t
+js_engine_get_version(duk_context* ctx)
+{
+	duk_push_string(ctx, VERSION_NAME);
 	return 1;
 }
 
@@ -608,16 +655,6 @@ static duk_ret_t
 js_GetFrameRate(duk_context* ctx)
 {
 	duk_push_int(ctx, g_framerate);
-	return 1;
-}
-
-static duk_ret_t
-js_GetGameManifest(duk_context* ctx)
-{
-	duk_push_lstring_t(ctx, get_game_manifest(g_fs));
-	duk_json_decode(ctx, -1);
-	duk_push_string(ctx, path_cstr(get_game_path(g_fs)));
-	duk_put_prop_string(ctx, -2, "directory");
 	return 1;
 }
 

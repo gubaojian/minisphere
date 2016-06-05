@@ -24,12 +24,11 @@ module.exports = (function()
 	var currentSelf = 0;
 	var hasUpdated = false;
 	var frameRate = 60;
-	var manifest = GetGameManifest();
 	var nextThreadID = 1;
 	var threads = [];
 	
-	if ('frameRate' in manifest && typeof manifest.frameRate === 'number')
-		frameRate = manifest.frameRate;
+	if ('frameRate' in engine.game && typeof engine.game.frameRate === 'number')
+		frameRate = engine.game.frameRate;
 	var threadSorter = function(a, b) {
 		return a.priority != b.priority ?
 			a.priority - b.priority :
