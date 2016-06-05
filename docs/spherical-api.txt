@@ -836,22 +836,17 @@ Color#fade(alpha);
 
 new Image(filename);
 
-    SphereFS compliant.
-
-    Constructs a new Image object from an image file.  Images can be used as
-    textures for Shape objects or drawn directly using the legacy method
-    Image:blit().
-
-    Images are read-only.  If you need a writable image, you should use a
-    Surface object instead.
+    Constructs a new Image object from an image file.  Images are used as
+    textures when drawing Shape objects.  Images are read-only.  For a writable
+    image, you should use a Surface object instead.
 
 new Image(surface);
 
     Creates an Image object with the contents of a specified surface.  This can
     be used to regain rendering performance after composing the surface.
 
-Image:width [read-only]
-Image:height [read-only]
+Image#width [read-only]
+Image#height [read-only]
 
     Gets the width or height of the image, in pixels.
 
@@ -860,27 +855,27 @@ new Transform();
     Constructs a transformation.  The object represents a 4x4 matrix and is
     initialized as an identity matrix.
 
-Transform:identity();
+Transform#identity();
 
     Initializes this matrix as an identity matrix.
 
-Transform:compose(otherMatrix);
+Transform#compose(otherMatrix);
 
     Composes this transform with another.  `otherMatrix` is multiplied from the
     left such that transformations are performed in the order you specify.
 
-Transform:rotate(theta[, vx, vy, vz]);
+Transform#rotate(theta[, vx, vy, vz]);
 
     Applies a rotation transformation to this matrix.  `theta` is the angle of
     rotation, in radians.  (vx, vy, vz) is the vector to rotate about.  For
     example the default is (0, 0, 1) which rotates about the Z axis.
 
-Transform:scale(sx, sy);
+Transform#scale(sx, sy);
 
     Applies a scaling transformation to this matrix.  `sx` and `sy` are the
     horizontal and vertical scaling factors, respectively.
 
-Transform:translate(tx, ty);
+Transform#translate(tx, ty);
 
     Applies a translation transformation to this matrix.  `tx` and `ty` are the
     horizontal and vertical translations, respectively.
@@ -1099,8 +1094,6 @@ WindowStyle.Default [read-only]
 
 new WindowStyle(filename);
 
-    SphereFS compliant.
-
     Constructs a WindowStyle object from a windowstyle file. The file must be in
     Sphere RWS format.
 
@@ -1130,8 +1123,6 @@ Font.Default [read-only]
     counter and other system output.
 
 new Font(filename);
-
-    SphereFS compliant.
 
     Constructs a Font object from a font file. The file must be in Sphere RFN
     format.

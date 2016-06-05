@@ -11,7 +11,6 @@ static duk_ret_t js_LoadFont               (duk_context* ctx);
 static duk_ret_t js_Font_get_Default       (duk_context* ctx);
 static duk_ret_t js_new_Font               (duk_context* ctx);
 static duk_ret_t js_Font_finalize          (duk_context* ctx);
-static duk_ret_t js_Font_toString          (duk_context* ctx);
 static duk_ret_t js_Font_get_colorMask     (duk_context* ctx);
 static duk_ret_t js_Font_set_colorMask     (duk_context* ctx);
 static duk_ret_t js_Font_get_height        (duk_context* ctx);
@@ -597,7 +596,6 @@ init_font_api(duk_context* ctx)
 	api_register_method(ctx, "Font", "getStringWidth", js_Font_getStringWidth);
 	api_register_method(ctx, "Font", "setCharacterImage", js_Font_setCharacterImage);
 	api_register_method(ctx, "Font", "setColorMask", js_Font_set_colorMask);
-	api_register_method(ctx, "Font", "toString", js_Font_toString);
 	api_register_method(ctx, "Font", "clone", js_Font_clone);
 	api_register_method(ctx, "Font", "drawText", js_Font_drawText);
 	api_register_method(ctx, "Font", "drawTextBox", js_Font_drawTextBox);
@@ -668,13 +666,6 @@ js_Font_finalize(duk_context* ctx)
 	font = duk_require_sphere_obj(ctx, 0, "Font");
 	free_font(font);
 	return 0;
-}
-
-static duk_ret_t
-js_Font_toString(duk_context* ctx)
-{
-	duk_push_string(ctx, "[object font]");
-	return 1;
 }
 
 static duk_ret_t

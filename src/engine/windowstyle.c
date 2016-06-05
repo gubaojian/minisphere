@@ -5,14 +5,11 @@
 #include "color.h"
 #include "image.h"
 
-static duk_ret_t js_GetSystemWindowStyle      (duk_context* ctx);
-static duk_ret_t js_LoadWindowStyle           (duk_context* ctx);
 static duk_ret_t js_WindowStyle_get_Default   (duk_context* ctx);
 static duk_ret_t js_new_WindowStyle           (duk_context* ctx);
 static duk_ret_t js_WindowStyle_finalize      (duk_context* ctx);
 static duk_ret_t js_WindowStyle_get_colorMask (duk_context* ctx);
 static duk_ret_t js_WindowStyle_set_colorMask (duk_context* ctx);
-static duk_ret_t js_WindowStyle_toString      (duk_context* ctx);
 static duk_ret_t js_WindowStyle_drawWindow    (duk_context* ctx);
 
 static windowstyle_t* s_sys_winstyle = NULL;
@@ -202,15 +199,10 @@ init_windowstyle_api(void)
 		s_sys_winstyle = load_windowstyle(systempath(filename));
 	}
 
-	// WindowStyle API functions
-	api_register_method(g_duk, NULL, "GetSystemWindowStyle", js_GetSystemWindowStyle);
-	
 	// WindowStyle object
-	api_register_method(g_duk, NULL, "LoadWindowStyle", js_LoadWindowStyle);
 	api_register_ctor(g_duk, "WindowStyle", js_new_WindowStyle, js_WindowStyle_finalize);
 	api_register_static_prop(g_duk, "WindowStyle", "Default", js_WindowStyle_get_Default, NULL);
 	api_register_prop(g_duk, "WindowStyle", "colorMask", js_WindowStyle_get_colorMask, js_WindowStyle_set_colorMask);
-	api_register_method(g_duk, "WindowStyle", "toString", js_WindowStyle_toString);
 	api_register_method(g_duk, "WindowStyle", "getColorMask", js_WindowStyle_get_colorMask);
 	api_register_method(g_duk, "WindowStyle", "setColorMask", js_WindowStyle_set_colorMask);
 	api_register_method(g_duk, "WindowStyle", "drawWindow", js_WindowStyle_drawWindow);
@@ -221,30 +213,6 @@ duk_push_sphere_windowstyle(duk_context* ctx, windowstyle_t* winstyle)
 {
 	duk_push_sphere_obj(ctx, "WindowStyle", ref_windowstyle(winstyle));
 	duk_push_sphere_color(ctx, color_new(255, 255, 255, 255)); duk_put_prop_string(ctx, -2, "\xFF" "color_mask");
-}
-
-static duk_ret_t
-js_GetSystemWindowStyle(duk_context* ctx)
-{
-	if (s_sys_winstyle == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_REFERENCE_ERROR, "missing system windowstyle");
-
-	duk_push_sphere_windowstyle(ctx, s_sys_winstyle);
-	return 1;
-}
-
-static duk_ret_t
-js_LoadWindowStyle(duk_context* ctx)
-{
-	const char*    filename;
-	windowstyle_t* winstyle;
-
-	filename = duk_require_path(ctx, 0, "windowstyles", true);
-	if (!(winstyle = load_windowstyle(filename)))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to load windowstyle `%s`", filename);
-	duk_push_sphere_windowstyle(ctx, winstyle);
-	free_windowstyle(winstyle);
-	return 1;
 }
 
 static duk_ret_t
@@ -289,13 +257,6 @@ js_WindowStyle_finalize(duk_context* ctx)
 	winstyle = duk_require_sphere_obj(ctx, 0, "WindowStyle");
 	free_windowstyle(winstyle);
 	return 0;
-}
-
-static duk_ret_t
-js_WindowStyle_toString(duk_context* ctx)
-{
-	duk_push_string(ctx, "[object windowstyle]");
-	return 1;
 }
 
 static duk_ret_t

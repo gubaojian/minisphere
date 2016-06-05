@@ -54,7 +54,6 @@ static duk_ret_t js_LoadSpriteset          (duk_context* ctx);
 static duk_ret_t js_new_Spriteset          (duk_context* ctx);
 static duk_ret_t js_Spriteset_finalize     (duk_context* ctx);
 static duk_ret_t js_Spriteset_get_filename (duk_context* ctx);
-static duk_ret_t js_Spriteset_toString     (duk_context* ctx);
 static duk_ret_t js_Spriteset_clone        (duk_context* ctx);
 static duk_ret_t js_Spriteset_get_image    (duk_context* ctx);
 static duk_ret_t js_Spriteset_set_image    (duk_context* ctx);
@@ -498,7 +497,6 @@ init_spriteset_api(duk_context* ctx)
 	api_register_method(ctx, NULL, "LoadSpriteset", js_LoadSpriteset);
 	api_register_ctor(ctx, "Spriteset", js_new_Spriteset, js_Spriteset_finalize);
 	api_register_prop(ctx, "Spriteset", "filename", js_Spriteset_get_filename, NULL);
-	api_register_method(ctx, "Spriteset", "toString", js_Spriteset_toString);
 	api_register_method(ctx, "Spriteset", "clone", js_Spriteset_clone);
 }
 
@@ -605,13 +603,6 @@ js_Spriteset_get_filename(duk_context* ctx)
 	spriteset = duk_require_sphere_obj(ctx, -1, "Spriteset");
 	duk_pop(ctx);
 	duk_push_string(ctx, spriteset->filename);
-	return 1;
-}
-
-static duk_ret_t
-js_Spriteset_toString(duk_context* ctx)
-{
-	duk_push_string(ctx, "[object spriteset]");
 	return 1;
 }
 

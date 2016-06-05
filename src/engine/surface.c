@@ -17,7 +17,6 @@ static duk_ret_t js_new_Surface               (duk_context* ctx);
 static duk_ret_t js_Surface_finalize          (duk_context* ctx);
 static duk_ret_t js_Surface_get_height        (duk_context* ctx);
 static duk_ret_t js_Surface_get_width         (duk_context* ctx);
-static duk_ret_t js_Surface_toString          (duk_context* ctx);
 static duk_ret_t js_Surface_getPixel          (duk_context* ctx);
 static duk_ret_t js_Surface_setAlpha          (duk_context* ctx);
 static duk_ret_t js_Surface_setBlendMode      (duk_context* ctx);
@@ -66,7 +65,6 @@ init_surface_api(void)
 	api_register_method(g_duk, NULL, "CreateSurface", js_CreateSurface);
 	api_register_method(g_duk, NULL, "LoadSurface", js_LoadSurface);
 	api_register_ctor(g_duk, "Surface", js_new_Surface, js_Surface_finalize);
-	api_register_method(g_duk, "Surface", "toString", js_Surface_toString);
 	api_register_prop(g_duk, "Surface", "height", js_Surface_get_height, NULL);
 	api_register_prop(g_duk, "Surface", "width", js_Surface_get_width, NULL);
 	api_register_method(g_duk, "Surface", "getPixel", js_Surface_getPixel);
@@ -257,13 +255,6 @@ js_Surface_get_width(duk_context* ctx)
 	image = duk_require_sphere_obj(ctx, -1, "Surface");
 
 	duk_push_int(ctx, get_image_width(image));
-	return 1;
-}
-
-static duk_ret_t
-js_Surface_toString(duk_context* ctx)
-{
-	duk_push_string(ctx, "[object surface]");
 	return 1;
 }
 

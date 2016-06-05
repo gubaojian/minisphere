@@ -164,7 +164,6 @@ static duk_ret_t js_Color_mix            (duk_context* ctx);
 static duk_ret_t js_Color_of             (duk_context* ctx);
 static duk_ret_t js_new_Color            (duk_context* ctx);
 static duk_ret_t js_Color_get_name       (duk_context* ctx);
-static duk_ret_t js_Color_toString       (duk_context* ctx);
 static duk_ret_t js_Color_clone          (duk_context* ctx);
 static duk_ret_t js_Color_fade           (duk_context* ctx);
 
@@ -209,7 +208,6 @@ init_color_api(void)
 	api_register_static_func(g_duk, "Color", "mix", js_Color_mix);
 	api_register_static_func(g_duk, "Color", "of", js_Color_of);
 	api_register_prop(g_duk, "Color", "name", js_Color_get_name, NULL);
-	api_register_method(g_duk, "Color", "toString", js_Color_toString);
 	api_register_method(g_duk, "Color", "clone", js_Color_clone);
 	api_register_method(g_duk, "Color", "fade", js_Color_fade);
 
@@ -385,13 +383,6 @@ js_Color_get_name(duk_context* ctx)
 	}
 	
 	duk_push_sprintf(ctx, "#%.2x%.2x%.2x%.2x", color.alpha, color.r, color.g, color.b);
-	return 1;
-}
-
-static duk_ret_t
-js_Color_toString(duk_context* ctx)
-{
-	duk_push_string(ctx, "[object color]");
 	return 1;
 }
 

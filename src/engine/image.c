@@ -19,14 +19,9 @@ struct image
 	image_t*        parent;
 };
 
-static duk_ret_t js_GetSystemArrow          (duk_context* ctx);
-static duk_ret_t js_GetSystemDownArrow      (duk_context* ctx);
-static duk_ret_t js_GetSystemUpArrow        (duk_context* ctx);
-static duk_ret_t js_LoadImage               (duk_context* ctx);
 static duk_ret_t js_GrabImage               (duk_context* ctx);
 static duk_ret_t js_new_Image               (duk_context* ctx);
 static duk_ret_t js_Image_finalize          (duk_context* ctx);
-static duk_ret_t js_Image_toString          (duk_context* ctx);
 static duk_ret_t js_Image_get_height        (duk_context* ctx);
 static duk_ret_t js_Image_get_width         (duk_context* ctx);
 static duk_ret_t js_Image_blit              (duk_context* ctx);
@@ -43,9 +38,6 @@ static void cache_pixels   (image_t* image);
 static void uncache_pixels (image_t* image);
 
 static unsigned int s_next_image_id = 0;
-static image_t*     s_sys_arrow = NULL;
-static image_t*     s_sys_dn_arrow = NULL;
-static image_t*     s_sys_up_arrow = NULL;
 
 image_t*
 create_image(int width, int height)
@@ -589,28 +581,9 @@ uncache_pixels(image_t* image)
 void
 init_image_api(duk_context* ctx)
 {
-	const char* filename;
-	
-	// load system-provided images
-	if (g_sys_conf != NULL) {
-		filename = kev_read_string(g_sys_conf, "Arrow", "pointer.png");
-		s_sys_arrow = load_image(systempath(filename));
-		filename = kev_read_string(g_sys_conf, "UpArrow", "up_arrow.png");
-		s_sys_up_arrow = load_image(systempath(filename));
-		filename = kev_read_string(g_sys_conf, "DownArrow", "down_arrow.png");
-		s_sys_dn_arrow = load_image(systempath(filename));
-	}
-	
-	// register image API functions
-	api_register_method(ctx, NULL, "GetSystemArrow", js_GetSystemArrow);
-	api_register_method(ctx, NULL, "GetSystemDownArrow", js_GetSystemDownArrow);
-	api_register_method(ctx, NULL, "GetSystemUpArrow", js_GetSystemUpArrow);
-	api_register_method(ctx, NULL, "LoadImage", js_LoadImage);
 	api_register_method(ctx, NULL, "GrabImage", js_GrabImage);
 
-	// register Image properties and methods
 	api_register_ctor(ctx, "Image", js_new_Image, js_Image_finalize);
-	api_register_method(ctx, "Image", "toString", js_Image_toString);
 	api_register_prop(ctx, "Image", "height", js_Image_get_height, NULL);
 	api_register_prop(ctx, "Image", "width", js_Image_get_width, NULL);
 	api_register_method(ctx, "Image", "blit", js_Image_blit);
@@ -634,52 +607,6 @@ image_t*
 duk_require_sphere_image(duk_context* ctx, duk_idx_t index)
 {
 	return duk_require_sphere_obj(ctx, index, "Image");
-}
-
-static duk_ret_t
-js_GetSystemArrow(duk_context* ctx)
-{
-	if (s_sys_arrow == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_REFERENCE_ERROR, "GetSystemArrow(): missing system arrow image");
-	duk_push_sphere_image(ctx, s_sys_arrow);
-	return 1;
-}
-
-static duk_ret_t
-js_GetSystemDownArrow(duk_context* ctx)
-{
-	if (s_sys_dn_arrow == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_REFERENCE_ERROR, "GetSystemDownArrow(): missing system down arrow image");
-	duk_push_sphere_image(ctx, s_sys_dn_arrow);
-	return 1;
-}
-
-static duk_ret_t
-js_GetSystemUpArrow(duk_context* ctx)
-{
-	if (s_sys_up_arrow == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_REFERENCE_ERROR, "GetSystemUpArrow(): missing system up arrow image");
-	duk_push_sphere_image(ctx, s_sys_up_arrow);
-	return 1;
-}
-
-static duk_ret_t
-js_LoadImage(duk_context* ctx)
-{
-	// LoadImage(filename); (legacy)
-	// Constructs an Image object from an image file.
-	// Arguments:
-	//     filename: The name of the image file, relative to ~sgm/images.
-
-	const char* filename;
-	image_t*    image;
-
-	filename = duk_require_path(ctx, 0, "images", true);
-	if (!(image = load_image(filename)))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Image(): unable to load image file `%s`", filename);
-	duk_push_sphere_image(ctx, image);
-	free_image(image);
-	return 1;
 }
 
 static duk_ret_t
@@ -794,13 +721,6 @@ js_Image_get_width(duk_context* ctx)
 	image = duk_require_sphere_image(ctx, -1);
 	duk_pop(ctx);
 	duk_push_int(ctx, get_image_width(image));
-	return 1;
-}
-
-static duk_ret_t
-js_Image_toString(duk_context* ctx)
-{
-	duk_push_string(ctx, "[object image]");
 	return 1;
 }
 
