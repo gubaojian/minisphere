@@ -1219,7 +1219,7 @@ new Mixer(frequency, bits[, channels]);
     not supported by the system, an error will be thrown ("unable to create
     hardware voice").
 
-Mixer:volume [read/write]
+Mixer#volume [read/write]
 
     Gets or sets the output volume of the mixer. This will affect the volume of
     any sounds played through the mixer.
@@ -1230,56 +1230,51 @@ new Sound(filename);
     formats are Ogg Vorbis (.ogg), WAV, MOD, S3M, IT, and FLAC.  minisphere
     does not support mp3 or MIDI.
 
-Sound:length [read-only]
+Sound#length [read-only]
 
     Gets the length of the sound in seconds.
 
-Sound:pan [read/write]
+Sound#pan [read/write]
 
     Gets or sets the current pan (balance). 0.0 is dead center, -1.0 is full
     left, and 1.0 is full right.
 
-Sound:playing [read-only]
+Sound#playing [read-only]
 
     true if the sound is currently playing, false otherwise.
 
-Sound:position [read/write]
+Sound#position [read/write]
 
     Gets or sets the playback position within the sound in seconds.
 
-Sound:repeat [read/write]
+Sound#repeat [read/write]
 
     Gets or sets whether the sound will automatically repeat when it reaches the
     end.
 
-Sound:seekable [read-only]
-
-    Gets or sets whether the sound is seekable.  Currently all supported formats
-    are seekable, so this will always be true.
-
-Sound:speed [read/write]
+Sound#speed [read/write]
 
     Gets the current playback speed of the sound.  0.5 is half speed, 1.0 is
     normal, 2.0 is double, etc.
 
-Sound:volume [read/write]
+Sound#volume [read/write]
 
     Gets or sets the current volume of the sound.  0.0 is silent, 1.0 is full
     volume.  Higher values are allowed, but may introduce distortion due to
     clipping.
 
-Sound:pause();
+Sound#pause();
 
     Pauses the sound.  If it is already paused, this has no effect.
 
-Sound:play([mixer]);
+Sound#play([mixer]);
 
     Begins or resumes sound playback.
     
     If `mixer` is provided, plays the sound on the specified mixer.  Otherwise,
     resumes the sound if it is currently paused.
 
-Sound:stop();
+Sound#stop();
 
     Stops playback and rewinds the playback position to the beginning.
 
@@ -1294,16 +1289,17 @@ new SoundStream([frequency[, bits[, channels]]]);
 
     The default stream format is 8-bit 22050Hz with 1 channel.
 
-SoundStream:bufferSize [read-only]
+SoundStream#bufferSize [read-only]
 
     Gets the total number of samples in the stream's buffer.
 
-SoundStream:mixer [read/write]
+SoundStream#buffer(data);
 
-    Gets the mixer current being used to play the stream.  This will be null if
-    the stream is stopped.
+    Writes audio data to the stream buffer.  `data` is an ArrayBuffer,
+    TypedArray or DataView containing the data to write.  Audio data must be
+    fed into a stream continuously while it is playing to prevent interruption.
 
-SoundStream:play([mixer]);
+SoundStream#play([mixer]);
 
     Starts the stream playing. Ideally, some audio should be pre-buffered into
     the stream (see SoundStream:write() below) first to minimize the risk of
@@ -1313,21 +1309,15 @@ SoundStream:play([mixer]);
     mixer is provided, minisphere will use the default mixer to play the
     stream (see `Mixer.Default`).
 
-SoundStream:pause();
+SoundStream#pause();
 
     Temporarily pauses playback of the stream.
 
-SoundStream:stop();
+SoundStream#stop();
 
     Stops playback of the stream and frees its buffer.  This should be called
     when you are done using a stream.  The stream may be reused after a stop()
     call, but you will have to feed new audio data.
-
-SoundStream:write(data);
-
-    Writes audio data to the stream buffer.  `data` is an ArrayBuffer,
-    TypedArray or DataView containing the data to write.  Audio data must be fed
-    into a stream continuously while it is playing to prevent interruption.
 
 
 Networking (Sockets)
@@ -1338,95 +1328,71 @@ Sphere provides.  The old routines are still available, but should be considered
 deprecated.  Under minisphere, sockets are divided into two types: Listening
 sockets, used for servers, and I/O sockets, for clients.
 
-GetLocalName();
-
-    Returns the calling machine's network name.
-
-GetLocalAddress();
-
-    Returns the calling machine's local IP address.
-
-new ListeningSocket(port[, backlog_size]);
+new Server(port[, max_backlog]);
 
     Constructs a new listening socket which listens for connections on `port`.
-    `backlog_size` specifies the size of the backlog. If the backlog fills, new
+    `max_backlog` specifies the backlog size.  If the backlog fills up, new
     connections will be dropped.
+    
+    The default backlog size is 16.
 
-ListeningSocket:accept();
+Server#accept();
 
     If one or more connections are waiting in the backlog, accepts one of them
-    and returns an IOSocket object representing the connection.  Otherwise,
+    and returns an Socket object representing the connection.  Otherwise,
     returns null.  This should be called regularly to prevent the backlog from
     filling up.
 
-ListeningSocket:close();
+Server#close();
 
-    Disconnects the socket. Any sockets in the backlog will be purged and no new
-    connections can be made unless a new ListeningSocket is created.
+    Shuts down the server.  Any pending connections in the backlog will be
+    purged and no new connections can be made unless a new Server is created.
 
-new IOSocket(hostname, port);
+new Socket(hostname, port);
 
-    Connects to `hostname` on `port` and constructs an IOSocket representing the
-    connection.  The hostname can either be a named address (e.g. google.com) or
-    an IP address (e.g. 127.0.0.1).  As this operation is non-blocking, a valid
-    socket will be returned even if the connection can be not be made; you must
-    call IOSocket:isConnected() to find out when the connection has opened.
+    Connects to `hostname` on `port` and constructs an Socket representing the
+    connection.  The hostname can either be a named address (e.g. google.com)
+    or an IP address (e.g. 127.0.0.1).  As this operation is non-blocking, a
+    valid Socket object will be returned even if the connection can be not be
+    made; you must monitor Socket#connected to find out when the connection is
+    established.
 
-IOSocket:remoteAddress [read-only]
+Socket#bytesPending [read-only]
+
+    Gets the number of bytes currently in the receive buffer.  Call
+    Socket#read() to retrieve this data.
+
+Socket#connected [read-only]
+
+    true if a connection has been established.  As long as this is false, you
+    cannot call any other methods on the socket object.  Doing so will cause an
+    error to be thrown.
+
+Socket#remoteAddress [read-only]
 
     Gets the IP address of the upstream end of the socket.  Throws an error if
     accessed before a connection has been established.
 
-IOSocket:remotePort [read-only]
+Socket#remotePort [read-only]
 
     Gets the port that the remote machine is using for the connection.
     Generally not a useful statistic, but it's there if you need it.  Throws an
     error if accessed before a connection is established.
 
-IOSocket:isConnected();
+Socket#close();
 
-    Returns true if a connection has been established.  As long as this returns
-    false, you cannot call any other methods on the socket object.  Doing so
-    will cause an error to be thrown.
+    Disconnects the socket.  A socket object cannot be reused after it is
+    closed; a new one must then be created.
 
-IOSocket:getPendingReadSize();
+Socket#read(bytes);
 
-    Gets the amount of data, in bytes, currently in the receive buffer.  Call
-    IOSocket:read() or :readString() to retrieve this data.
-
-IOSocket:pipe(destination);
-
-    Automatically pipes the data received by the socket to the specified
-    destination socket.  Piping a socket into itself will create an echo server.
-    Note that only one pipe can be active at a time for a given socket; calling
-    pipe() multiple times will simply change the destination.
-
-IOSocket:read(bytes);
-
-    Reads up to `bytes` bytes from the socket and returns a ByteArray containing
+    Reads up to `bytes` bytes from the socket and returns an ArrayBuffer with
     the data received.
 
-IOSocket:readString(bytes);
-
-    Same as IOSocket:read(), but returns a string instead of a ByteArray. This
-    may be more convenient, depending on your use case.
-
-IOSocket:unpipe();
-
-    Reverses the effect of a pipe() call and closes the pipe.  read() can be
-    called normally afterwards.
-
-IOSocket:write(data);
+Socket#write(data);
 
     Writes data to the socket, which can be read at the other end.  `data` can
-    be either a ByteArray, ArrayBuffer, TypedArray, or string.
-
-    If a string is provided, it will be written encoded as UTF-8.
-
-IOSocket:close();
-
-    Disconnects the socket.  Note that a socket object cannot be reused after it
-    has been closed; a new one must be created.
+    be either an ArrayBuffer, TypedArray view, or DataView.
 
 
 File and Directory Management

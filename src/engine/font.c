@@ -7,7 +7,6 @@
 #include "image.h"
 #include "unicode.h"
 
-static duk_ret_t js_GetSystemFont          (duk_context* ctx);
 static duk_ret_t js_LoadFont               (duk_context* ctx);
 static duk_ret_t js_Font_get_Default       (duk_context* ctx);
 static duk_ret_t js_new_Font               (duk_context* ctx);
@@ -585,9 +584,6 @@ update_font_metrics(font_t* font)
 void
 init_font_api(duk_context* ctx)
 {
-	// Font API functions
-	api_register_method(ctx, NULL, "GetSystemFont", js_GetSystemFont);
-	
 	// Font object
 	api_register_method(ctx, NULL, "LoadFont", js_LoadFont);
 	api_register_ctor(ctx, "Font", js_new_Font, js_Font_finalize);
@@ -615,13 +611,6 @@ duk_push_sphere_font(duk_context* ctx, font_t* font)
 	duk_push_sphere_obj(ctx, "Font", ref_font(font));
 	duk_push_sphere_color(ctx, color_new(255, 255, 255, 255));
 	duk_put_prop_string(ctx, -2, "\xFF" "color_mask");
-}
-
-static duk_ret_t
-js_GetSystemFont(duk_context* ctx)
-{
-	duk_push_sphere_font(ctx, g_sys_font);
-	return 1;
 }
 
 static duk_ret_t
