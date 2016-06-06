@@ -681,8 +681,8 @@ js_Group_draw(duk_context* ctx)
 	int      num_args;
 	image_t* surface;
 
+	num_args = duk_get_top(ctx);
 	duk_push_this(ctx);
-	num_args = duk_get_top(ctx) - 1;
 	group = duk_require_sphere_obj(ctx, -1, "Group");
 	surface = num_args >= 1 ? duk_require_sphere_obj(ctx, 0, "Surface")
 		: NULL;

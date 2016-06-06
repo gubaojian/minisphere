@@ -59,7 +59,6 @@ static duk_ret_t js_FlipScreen            (duk_context* ctx);
 static duk_ret_t js_UnskipFrame           (duk_context* ctx);
 
 static vector_t*  s_extensions;
-static lstring_t* s_user_agent;
 
 void
 initialize_api(duk_context* ctx)
@@ -68,10 +67,7 @@ initialize_api(duk_context* ctx)
 
 	int i;
 
-	console_log(1, "initializing Sphere API");
-
-	s_user_agent = lstr_newf("v%.1f (%s %s)", SPHERE_API_VERSION, PRODUCT_NAME, VERSION_NAME);
-	console_log(1, "    API %s", lstr_cstr(s_user_agent));
+	console_log(1, "initializing Spherical API %d.%d", SPHERE_API_VERSION, SPHERE_API_LEVEL - 1);
 
 	// register API extensions
 	s_extensions = vector_new(sizeof(char*));
@@ -90,7 +86,8 @@ initialize_api(duk_context* ctx)
 
 	// set up RequireScript() inclusion tracking table
 	duk_push_global_stash(ctx);
-	duk_push_object(ctx); duk_put_prop_string(ctx, -2, "RequireScript");
+	duk_push_object(ctx);
+	duk_put_prop_string(ctx, -2, "RequireScript");
 	duk_pop(ctx);
 
 	// stash an object to hold prototypes for built-in objects
@@ -153,7 +150,7 @@ initialize_api(duk_context* ctx)
 void
 shutdown_api(void)
 {
-	console_log(1, "shutting down Sphere API");
+	console_log(1, "shutting down Spherical API");
 }
 
 bool
