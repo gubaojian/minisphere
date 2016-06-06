@@ -177,8 +177,8 @@ Assert(condition, error_message[, stack_offset]);
     is blamed on.
 
 
-engine Object
--------------
+`engine` global
+---------------
 
 The `engine` global variable provides access to low-level engine facilities and
 data, such as the engine's name, supported Sphere API version, etc.
@@ -240,6 +240,36 @@ engine.sleep(time);
     Suspends game execution for `time` seconds.  The engine will "spin down"
     during this time and relinquish its CPU cycles to other applications.  No
     JavaScript code will execution until the timeout expires.
+
+
+`screen` global
+---------------
+
+The `screen` global variable refers to a Surface object representing the
+screen.  It can be used as a render target, and provides methods and properties
+to manage the presentation of your game.
+
+screen.frameRate [read/write]
+
+    Gets or sets the frame rate.  When screen.flip() is called continuously in
+    a loop, your game will automatically be regulated to run at this frame
+    rate.  When the engine starts, screen.frameRate is set to 60.
+
+screen.width [read-only]
+screen.height [read-only]
+
+    Gets the width and height of the screen resolution.  These properties are
+    read-only: To change the resolution at runtime, use screen.resize().
+
+screen.flip();
+
+    Flips the backbuffer to the screen.  This also performs event loop
+    processing, so if it is not called continuously (or engine.doEvents() in
+    its place, see above), the engine may stop responding.
+
+screen.resize(width, height);
+
+    Changes the screen resolution.
 
 
 Keyboard Routines
@@ -584,12 +614,6 @@ ApplyColorMask(color);
     Applies a full-screen color mask. The color passed in is multiplied with the
     pixels of the backbuffer to tint the screen. This may be used for, e.g.
     day/night effects.
-
-FlipScreen();
-
-    Flips the backbuffer.  This also performs event loop processing, so if it is
-    not called regularly (or DoEvents() in its place, see above), the engine
-    will stop responding.
 
 
 Frame Skipping

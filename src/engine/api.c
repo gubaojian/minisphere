@@ -45,17 +45,13 @@ static duk_ret_t js_RequireScript         (duk_context* ctx);
 static duk_ret_t js_EvaluateSystemScript  (duk_context* ctx);
 static duk_ret_t js_EvaluateScript        (duk_context* ctx);
 static duk_ret_t js_IsSkippedFrame        (duk_context* ctx);
-static duk_ret_t js_GetFrameRate          (duk_context* ctx);
 static duk_ret_t js_GetMaxFrameSkips      (duk_context* ctx);
 static duk_ret_t js_GetScreenHeight       (duk_context* ctx);
 static duk_ret_t js_GetScreenWidth        (duk_context* ctx);
-static duk_ret_t js_SetFrameRate          (duk_context* ctx);
 static duk_ret_t js_SetMaxFrameSkips      (duk_context* ctx);
-static duk_ret_t js_SetScreenSize         (duk_context* ctx);
 static duk_ret_t js_Abort                 (duk_context* ctx);
 static duk_ret_t js_Alert                 (duk_context* ctx);
 static duk_ret_t js_Assert                (duk_context* ctx);
-static duk_ret_t js_FlipScreen            (duk_context* ctx);
 static duk_ret_t js_UnskipFrame           (duk_context* ctx);
 
 static vector_t*  s_extensions;
@@ -114,17 +110,13 @@ initialize_api(duk_context* ctx)
 	api_register_method(ctx, NULL, "RequireScript", js_RequireScript);
 	api_register_method(ctx, NULL, "RequireSystemScript", js_RequireSystemScript);
 	api_register_method(ctx, NULL, "IsSkippedFrame", js_IsSkippedFrame);
-	api_register_method(ctx, NULL, "GetFrameRate", js_GetFrameRate);
 	api_register_method(ctx, NULL, "GetMaxFrameSkips", js_GetMaxFrameSkips);
 	api_register_method(ctx, NULL, "GetScreenHeight", js_GetScreenHeight);
 	api_register_method(ctx, NULL, "GetScreenWidth", js_GetScreenWidth);
-	api_register_method(ctx, NULL, "SetFrameRate", js_SetFrameRate);
 	api_register_method(ctx, NULL, "SetMaxFrameSkips", js_SetMaxFrameSkips);
-	api_register_method(ctx, NULL, "SetScreenSize", js_SetScreenSize);
 	api_register_method(ctx, NULL, "Abort", js_Abort);
 	api_register_method(ctx, NULL, "Alert", js_Alert);
 	api_register_method(ctx, NULL, "Assert", js_Assert);
-	api_register_method(ctx, NULL, "FlipScreen", js_FlipScreen);
 	api_register_method(ctx, NULL, "UnskipFrame", js_UnskipFrame);
 
 	// initialize subsystem APIs
@@ -679,13 +671,6 @@ js_IsSkippedFrame(duk_context* ctx)
 }
 
 static duk_ret_t
-js_GetFrameRate(duk_context* ctx)
-{
-	duk_push_int(ctx, g_framerate);
-	return 1;
-}
-
-static duk_ret_t
 js_GetMaxFrameSkips(duk_context* ctx)
 {
 	duk_push_int(ctx, screen_get_frameskip(g_screen));
@@ -714,17 +699,6 @@ js_engine_get_time(duk_context* ctx)
 }
 
 static duk_ret_t
-js_SetFrameRate(duk_context* ctx)
-{
-	int framerate = duk_require_int(ctx, 0);
-
-	if (framerate < 0)
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "SetFrameRate(): framerate must be positive (got: %d)", framerate);
-	g_framerate = framerate;
-	return 0;
-}
-
-static duk_ret_t
 js_SetMaxFrameSkips(duk_context* ctx)
 {
 	int max_skips = duk_require_int(ctx, 0);
@@ -732,22 +706,6 @@ js_SetMaxFrameSkips(duk_context* ctx)
 	if (max_skips < 0)
 		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "SetMaxFrameSkips(): value cannot be negative (%d)", max_skips);
 	screen_set_frameskip(g_screen, max_skips);
-	return 0;
-}
-
-static duk_ret_t
-js_SetScreenSize(duk_context* ctx)
-{
-	int  res_width;
-	int  res_height;
-
-	res_width = duk_require_int(ctx, 0);
-	res_height = duk_require_int(ctx, 1);
-
-	if (res_width < 0 || res_height < 0)
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "SetScreenSize(): dimensions cannot be negative (got X: %d, Y: %d)",
-			res_width, res_height);
-	screen_resize(g_screen, res_width, res_height);
 	return 0;
 }
 
@@ -856,13 +814,6 @@ js_Assert(duk_context* ctx)
 	}
 	duk_dup(ctx, 0);
 	return 1;
-}
-
-static duk_ret_t
-js_FlipScreen(duk_context* ctx)
-{
-	screen_flip(g_screen, g_framerate);
-	return 0;
 }
 
 static duk_ret_t

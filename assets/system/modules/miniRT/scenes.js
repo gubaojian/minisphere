@@ -512,7 +512,7 @@ scenes.scenelet('marquee',
 		this.color = color;
 		this.background = backgroundColor;
 		this.font = Font.Default;
-		this.windowSize = GetScreenWidth() + this.font.getStringWidth(this.text);
+		this.windowSize = screen.width + this.font.getStringWidth(this.text);
 		this.height = this.font.getHeight() + 10;
 		this.textHeight = this.font.getHeight();
 		this.fadeness = 0.0;
@@ -526,10 +526,10 @@ scenes.scenelet('marquee',
 	},
 	render: function(scene) {
 		var boxHeight = this.height * this.fadeness;
-		var boxY = GetScreenHeight() / 2 - boxHeight / 2;
-		var textX = GetScreenWidth() - this.scroll * this.windowSize;
+		var boxY = screen.height / 2 - boxHeight / 2;
+		var textX = screen.width - this.scroll * this.windowSize;
 		var textY = boxY + boxHeight / 2 - this.textHeight / 2;
-		Rectangle(0, boxY, GetScreenWidth(), boxHeight, this.background);
+		Rectangle(0, boxY, screen.width, boxHeight, this.background);
 		this.font.setColorMask(new Color(0, 0, 0, this.color.alpha));
 		this.font.drawText(textX + 1, textY + 1, this.text);
 		this.font.setColorMask(this.color);
@@ -677,7 +677,7 @@ scenes.scenelet('pause',
 		this.elapsed = 0;
 	},
 	update: function(scene) {
-		this.elapsed += 1.0 / threads.frameRate;
+		this.elapsed += 1.0 / screen.frameRate;
 		return this.elapsed < this.duration;
 	}
 });
@@ -885,7 +885,7 @@ scenes.scenelet('tween',
 		}
 	},
 	update: function(scene) {
-		this.elapsed += 1.0 / threads.frameRate;
+		this.elapsed += 1.0 / screen.frameRate;
 		if (this.elapsed < this.duration) {
 			for (var p in this.change) {
 				this.object[p] = this.easers[this.type](this.elapsed, this.startValues[p], this.change[p], this.duration);

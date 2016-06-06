@@ -15,20 +15,14 @@ const link = require('link');
 var threads =
 module.exports = (function()
 {
-	var _SetFrameRate = SetFrameRate;
-	var _SetMapEngineFrameRate = SetMapEngineFrameRate;
 	var _SetRenderScript = SetRenderScript;
 	var _SetUpdateScript = SetUpdateScript;
-	var _MapEngine = MapEngine;
 	
 	var currentSelf = 0;
 	var hasUpdated = false;
-	var frameRate = 60;
 	var nextThreadID = 1;
 	var threads = [];
 	
-	if ('frameRate' in engine.game && typeof engine.game.frameRate === 'number')
-		frameRate = engine.game.frameRate;
 	var threadSorter = function(a, b) {
 		return a.priority != b.priority ?
 			a.priority - b.priority :
@@ -37,19 +31,11 @@ module.exports = (function()
 	
 	_SetUpdateScript(updateAll);
 	_SetRenderScript(renderAll);
-	_SetFrameRate(frameRate);
-	_SetMapEngineFrameRate(frameRate);
-
-	// the threading system commandeers several legacy APIs, making them unsafe
-	// to use without messing with the operation of miniRT, so we disable them.
-	// for MapEngine(), just override the framerate.
-	MapEngine = function(mapName) { _MapEngine(mapName, frameRate); }
-	SetUpdateScript = SetRenderScript = SetFrameRate = SetMapEngineFrameRate
-		= function() { Abort("API incompatible with miniRT/threads", -1); }
+	SetUpdateScript = SetRenderScript = function() {
+		Abort("API incompatible with miniRT", -1);
+	}
 
 	return {
-		get frameRate() { return frameRate; },
-		set frameRate(value) { set_frameRate(value); },
 		create:    create,
 		createEx:  createEx,
 		isRunning: isRunning,
@@ -66,7 +52,7 @@ module.exports = (function()
 			RenderMap();
 		else
 			renderAll();
-		FlipScreen();
+		screen.flip();
 		if (IsMapEngineRunning()) {
 			hasUpdated = false;
 			UpdateMapEngine();
@@ -77,16 +63,6 @@ module.exports = (function()
 		}
 	};
 
-	// threads.frameRate (read/write)
-	// gets or sets the miniRT frame rate.  this should be used instead of
-	// SetFrameRate(), which will throw an error if called.
-	function set_frameRate(value)
-	{
-		frameRate = Math.floor(Math.max(value, 1));
-		_SetFrameRate(frameRate);
-		_SetMapEngineFrameRate(frameRate);
-	}
-	
 	// threads.create()
 	// create an object thread.  this is the recommended thread creation method.
 	// arguments:

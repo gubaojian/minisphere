@@ -19,7 +19,7 @@ module.exports = (function() {
 	var visible = { yes: false, fade: 0.0, line: 0.0 };
 	var wasKeyDown = false;
 
-	var numLines = Math.floor((GetScreenHeight() - 32) / font.getHeight());
+	var numLines = Math.floor((screen.height - 32) / font.getHeight());
 	var logFileName = 'logPath' in game ? engine.game.logPath : null;
 	var bufferSize = 1000;
 	var prompt = "$";
@@ -187,7 +187,7 @@ module.exports = (function() {
 
 		// draw the command prompt...
 		var boxY = -22 * (1.0 - visible.fade);
-		Rectangle(0, boxY, GetScreenWidth(), 22, new Color(0, 0, 0, visible.fade * 224));
+		Rectangle(0, boxY, screen.width, 22, new Color(0, 0, 0, visible.fade * 224));
 		var promptWidth = font.getStringWidth(prompt + " ");
 		font.setColorMask(new Color(0, 0, 0, visible.fade * 192));
 		font.drawText(6, 6 + boxY, prompt);
@@ -202,10 +202,10 @@ module.exports = (function() {
 
 		// ...then the console output
 		var boxHeight = numLines * font.getHeight() + 10;
-		var boxY = GetScreenHeight() - boxHeight * visible.fade;
-		Rectangle(0, boxY, GetScreenWidth(), boxHeight, new Color(0, 0, 0, visible.fade * 192));
+		var boxY = screen.height - boxHeight * visible.fade;
+		Rectangle(0, boxY, screen.width, boxHeight, new Color(0, 0, 0, visible.fade * 192));
 		var oldClip = GetClippingRectangle();
-		SetClippingRectangle(5, boxY + 5, GetScreenWidth() - 10, boxHeight - 10);
+		SetClippingRectangle(5, boxY + 5, screen.width - 10, boxHeight - 10);
 		for (var i = -1; i < numLines + 1; ++i) {
 			var lineToDraw = (nextLine - numLines) + i - Math.floor(visible.line);
 			var lineInBuffer = lineToDraw % bufferSize;
