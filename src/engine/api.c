@@ -35,7 +35,10 @@ static duk_ret_t js_engine_get_game       (duk_context* ctx);
 static duk_ret_t js_engine_get_name       (duk_context* ctx);
 static duk_ret_t js_engine_get_time       (duk_context* ctx);
 static duk_ret_t js_engine_get_version    (duk_context* ctx);
+static duk_ret_t js_engine_dispatch       (duk_context* ctx);
 static duk_ret_t js_engine_doEvents       (duk_context* ctx);
+static duk_ret_t js_engine_exit           (duk_context* ctx);
+static duk_ret_t js_engine_restart        (duk_context* ctx);
 static duk_ret_t js_engine_sleep          (duk_context* ctx);
 static duk_ret_t js_RequireSystemScript   (duk_context* ctx);
 static duk_ret_t js_RequireScript         (duk_context* ctx);
@@ -43,7 +46,6 @@ static duk_ret_t js_EvaluateSystemScript  (duk_context* ctx);
 static duk_ret_t js_EvaluateScript        (duk_context* ctx);
 static duk_ret_t js_IsSkippedFrame        (duk_context* ctx);
 static duk_ret_t js_GetFrameRate          (duk_context* ctx);
-static duk_ret_t js_GetGameList           (duk_context* ctx);
 static duk_ret_t js_GetMaxFrameSkips      (duk_context* ctx);
 static duk_ret_t js_GetScreenHeight       (duk_context* ctx);
 static duk_ret_t js_GetScreenWidth        (duk_context* ctx);
@@ -53,10 +55,7 @@ static duk_ret_t js_SetScreenSize         (duk_context* ctx);
 static duk_ret_t js_Abort                 (duk_context* ctx);
 static duk_ret_t js_Alert                 (duk_context* ctx);
 static duk_ret_t js_Assert                (duk_context* ctx);
-static duk_ret_t js_ExecuteGame           (duk_context* ctx);
-static duk_ret_t js_Exit                  (duk_context* ctx);
 static duk_ret_t js_FlipScreen            (duk_context* ctx);
-static duk_ret_t js_RestartGame           (duk_context* ctx);
 static duk_ret_t js_UnskipFrame           (duk_context* ctx);
 
 static vector_t*  s_extensions;
@@ -107,7 +106,10 @@ initialize_api(duk_context* ctx)
 	api_register_static_prop(ctx, "engine", "name", js_engine_get_name, NULL);
 	api_register_static_prop(ctx, "engine", "time", js_engine_get_time, NULL);
 	api_register_static_prop(ctx, "engine", "version", js_engine_get_version, NULL);
+	api_register_static_func(ctx, "engine", "dispatch", js_engine_dispatch);
 	api_register_static_func(ctx, "engine", "doEvents", js_engine_doEvents);
+	api_register_static_func(ctx, "engine", "exit", js_engine_exit);
+	api_register_static_func(ctx, "engine", "restart", js_engine_restart);
 	api_register_static_func(ctx, "engine", "sleep", js_engine_sleep);
 
 	api_register_method(ctx, NULL, "EvaluateScript", js_EvaluateScript);
@@ -116,7 +118,6 @@ initialize_api(duk_context* ctx)
 	api_register_method(ctx, NULL, "RequireSystemScript", js_RequireSystemScript);
 	api_register_method(ctx, NULL, "IsSkippedFrame", js_IsSkippedFrame);
 	api_register_method(ctx, NULL, "GetFrameRate", js_GetFrameRate);
-	api_register_method(ctx, NULL, "GetGameList", js_GetGameList);
 	api_register_method(ctx, NULL, "GetMaxFrameSkips", js_GetMaxFrameSkips);
 	api_register_method(ctx, NULL, "GetScreenHeight", js_GetScreenHeight);
 	api_register_method(ctx, NULL, "GetScreenWidth", js_GetScreenWidth);
@@ -126,14 +127,10 @@ initialize_api(duk_context* ctx)
 	api_register_method(ctx, NULL, "Abort", js_Abort);
 	api_register_method(ctx, NULL, "Alert", js_Alert);
 	api_register_method(ctx, NULL, "Assert", js_Assert);
-	api_register_method(ctx, NULL, "Exit", js_Exit);
-	api_register_method(ctx, NULL, "ExecuteGame", js_ExecuteGame);
 	api_register_method(ctx, NULL, "FlipScreen", js_FlipScreen);
-	api_register_method(ctx, NULL, "RestartGame", js_RestartGame);
 	api_register_method(ctx, NULL, "UnskipFrame", js_UnskipFrame);
 
 	// initialize subsystem APIs
-	init_async_api();
 	init_audio_api();
 	init_color_api();
 	init_commonjs_api();
@@ -552,11 +549,35 @@ js_engine_get_version(duk_context* ctx)
 }
 
 static duk_ret_t
+js_engine_dispatch(duk_context* ctx)
+{
+	script_t* script;
+
+	script = duk_require_sphere_script(ctx, 0, "synth:async.js");
+
+	if (!queue_async_script(script))
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to dispatch async script");
+	return 0;
+}
+
+static duk_ret_t
 js_engine_doEvents(duk_context* ctx)
 {
 	do_events();
 	duk_push_boolean(ctx, true);
 	return 1;
+}
+
+static duk_ret_t
+js_engine_exit(duk_context* ctx)
+{
+	exit_game(false);
+}
+
+static duk_ret_t
+js_engine_restart(duk_context* ctx)
+{
+	restart_engine();
 }
 
 static duk_ret_t
@@ -664,45 +685,6 @@ static duk_ret_t
 js_GetFrameRate(duk_context* ctx)
 {
 	duk_push_int(ctx, g_framerate);
-	return 1;
-}
-
-static duk_ret_t
-js_GetGameList(duk_context* ctx)
-{
-	ALLEGRO_FS_ENTRY* file_info;
-	ALLEGRO_FS_ENTRY* fse;
-	path_t*           path = NULL;
-	path_t*           paths[2];
-	sandbox_t*        sandbox;
-
-	int i, j = 0;
-
-	// build search paths
-	paths[0] = path_rebase(path_new("games/"), enginepath());
-	paths[1] = path_rebase(path_new("minisphere/games/"), homepath());
-
-	// search for supported games
-	duk_push_array(ctx);
-	for (i = sizeof paths / sizeof(path_t*) - 1; i >= 0; --i) {
-		fse = al_create_fs_entry(path_cstr(paths[i]));
-		if (al_get_fs_entry_mode(fse) & ALLEGRO_FILEMODE_ISDIR && al_open_directory(fse)) {
-			while (file_info = al_read_directory(fse)) {
-				path = path_new(al_get_fs_entry_name(file_info));
-				if (sandbox = new_sandbox(path_cstr(path))) {
-					duk_push_lstring_t(ctx, get_game_manifest(sandbox));
-					duk_json_decode(ctx, -1);
-					duk_push_string(ctx, path_cstr(path));
-					duk_put_prop_string(ctx, -2, "directory");
-					duk_put_prop_index(ctx, -2, j++);
-					free_sandbox(sandbox);
-				}
-				path_free(path);
-			}
-		}
-		al_destroy_fs_entry(fse);
-		path_free(paths[i]);
-	}
 	return 1;
 }
 
@@ -880,43 +862,10 @@ js_Assert(duk_context* ctx)
 }
 
 static duk_ret_t
-js_ExecuteGame(duk_context* ctx)
-{
-	path_t*     games_path;
-	const char* filename;
-
-	filename = duk_require_string(ctx, 0);
-
-	// store the old game path so we can relaunch when the chained game exits
-	g_last_game_path = path_dup(get_game_path(g_fs));
-
-	// if the passed-in path is relative, resolve it relative to <engine>/games.
-	// this is done for compatibility with Sphere 1.x.
-	g_game_path = path_new(filename);
-	games_path = path_rebase(path_new("games/"), enginepath());
-	path_rebase(g_game_path, games_path);
-	path_free(games_path);
-
-	restart_engine();
-}
-
-static duk_ret_t
-js_Exit(duk_context* ctx)
-{
-	exit_game(false);
-}
-
-static duk_ret_t
 js_FlipScreen(duk_context* ctx)
 {
 	screen_flip(g_screen, g_framerate);
 	return 0;
-}
-
-static duk_ret_t
-js_RestartGame(duk_context* ctx)
-{
-	restart_engine();
 }
 
 static duk_ret_t

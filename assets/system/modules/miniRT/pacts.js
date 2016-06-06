@@ -24,7 +24,7 @@ module.exports = (function()
 		{
 			if (state == 'pending')
 				deferred.push(handler);
-			else DispatchScript(function() {
+			else engine.dispatch(function() {
 				var callback = state == 'fulfilled' ? handler.fulfiller
 					: state == 'rejected' ? handler.rejector
 					: undefined;
