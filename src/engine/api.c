@@ -33,7 +33,10 @@ static duk_ret_t js_engine_get_apiVersion (duk_context* ctx);
 static duk_ret_t js_engine_get_extensions (duk_context* ctx);
 static duk_ret_t js_engine_get_game       (duk_context* ctx);
 static duk_ret_t js_engine_get_name       (duk_context* ctx);
+static duk_ret_t js_engine_get_time       (duk_context* ctx);
 static duk_ret_t js_engine_get_version    (duk_context* ctx);
+static duk_ret_t js_engine_doEvents       (duk_context* ctx);
+static duk_ret_t js_engine_sleep          (duk_context* ctx);
 static duk_ret_t js_RequireSystemScript   (duk_context* ctx);
 static duk_ret_t js_RequireScript         (duk_context* ctx);
 static duk_ret_t js_EvaluateSystemScript  (duk_context* ctx);
@@ -44,17 +47,12 @@ static duk_ret_t js_GetGameList           (duk_context* ctx);
 static duk_ret_t js_GetMaxFrameSkips      (duk_context* ctx);
 static duk_ret_t js_GetScreenHeight       (duk_context* ctx);
 static duk_ret_t js_GetScreenWidth        (duk_context* ctx);
-static duk_ret_t js_GetSeconds            (duk_context* ctx);
-static duk_ret_t js_GetTime               (duk_context* ctx);
 static duk_ret_t js_SetFrameRate          (duk_context* ctx);
 static duk_ret_t js_SetMaxFrameSkips      (duk_context* ctx);
 static duk_ret_t js_SetScreenSize         (duk_context* ctx);
 static duk_ret_t js_Abort                 (duk_context* ctx);
 static duk_ret_t js_Alert                 (duk_context* ctx);
 static duk_ret_t js_Assert                (duk_context* ctx);
-static duk_ret_t js_CreateStringFromCode  (duk_context* ctx);
-static duk_ret_t js_Delay                 (duk_context* ctx);
-static duk_ret_t js_DoEvents              (duk_context* ctx);
 static duk_ret_t js_ExecuteGame           (duk_context* ctx);
 static duk_ret_t js_Exit                  (duk_context* ctx);
 static duk_ret_t js_FlipScreen            (duk_context* ctx);
@@ -91,12 +89,6 @@ initialize_api(duk_context* ctx)
 	duk_push_global_object(ctx);
 	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE);
 
-	// inject __defineGetter__/__defineSetter__ polyfills
-	duk_eval_string(ctx, "Object.defineProperty(Object.prototype, '__defineGetter__', { value: function(name, func) {"
-		"Object.defineProperty(this, name, { get: func, configurable: true }); } });");
-	duk_eval_string(ctx, "Object.defineProperty(Object.prototype, '__defineSetter__', { value: function(name, func) {"
-		"Object.defineProperty(this, name, { set: func, configurable: true }); } });");
-
 	// set up RequireScript() inclusion tracking table
 	duk_push_global_stash(ctx);
 	duk_push_object(ctx); duk_put_prop_string(ctx, -2, "RequireScript");
@@ -113,7 +105,10 @@ initialize_api(duk_context* ctx)
 	api_register_static_prop(ctx, "engine", "extensions", js_engine_get_extensions, NULL);
 	api_register_static_prop(ctx, "engine", "game", js_engine_get_game, NULL);
 	api_register_static_prop(ctx, "engine", "name", js_engine_get_name, NULL);
+	api_register_static_prop(ctx, "engine", "time", js_engine_get_time, NULL);
 	api_register_static_prop(ctx, "engine", "version", js_engine_get_version, NULL);
+	api_register_static_func(ctx, "engine", "doEvents", js_engine_doEvents);
+	api_register_static_func(ctx, "engine", "sleep", js_engine_sleep);
 
 	api_register_method(ctx, NULL, "EvaluateScript", js_EvaluateScript);
 	api_register_method(ctx, NULL, "EvaluateSystemScript", js_EvaluateSystemScript);
@@ -125,17 +120,12 @@ initialize_api(duk_context* ctx)
 	api_register_method(ctx, NULL, "GetMaxFrameSkips", js_GetMaxFrameSkips);
 	api_register_method(ctx, NULL, "GetScreenHeight", js_GetScreenHeight);
 	api_register_method(ctx, NULL, "GetScreenWidth", js_GetScreenWidth);
-	api_register_method(ctx, NULL, "GetSeconds", js_GetSeconds);
-	api_register_method(ctx, NULL, "GetTime", js_GetTime);
 	api_register_method(ctx, NULL, "SetFrameRate", js_SetFrameRate);
 	api_register_method(ctx, NULL, "SetMaxFrameSkips", js_SetMaxFrameSkips);
 	api_register_method(ctx, NULL, "SetScreenSize", js_SetScreenSize);
 	api_register_method(ctx, NULL, "Abort", js_Abort);
 	api_register_method(ctx, NULL, "Alert", js_Alert);
 	api_register_method(ctx, NULL, "Assert", js_Assert);
-	api_register_method(ctx, NULL, "CreateStringFromCode", js_CreateStringFromCode);
-	api_register_method(ctx, NULL, "Delay", js_Delay);
-	api_register_method(ctx, NULL, "DoEvents", js_DoEvents);
 	api_register_method(ctx, NULL, "Exit", js_Exit);
 	api_register_method(ctx, NULL, "ExecuteGame", js_ExecuteGame);
 	api_register_method(ctx, NULL, "FlipScreen", js_FlipScreen);
@@ -562,6 +552,25 @@ js_engine_get_version(duk_context* ctx)
 }
 
 static duk_ret_t
+js_engine_doEvents(duk_context* ctx)
+{
+	do_events();
+	duk_push_boolean(ctx, true);
+	return 1;
+}
+
+static duk_ret_t
+js_engine_sleep(duk_context* ctx)
+{
+	double timeout;
+
+	timeout = duk_require_number(ctx, 0);
+
+	delay(timeout);
+	return 0;
+}
+
+static duk_ret_t
 js_EvaluateScript(duk_context* ctx)
 {
 	const char* filename;
@@ -719,16 +728,9 @@ js_GetScreenWidth(duk_context* ctx)
 }
 
 static duk_ret_t
-js_GetSeconds(duk_context* ctx)
+js_engine_get_time(duk_context* ctx)
 {
 	duk_push_number(ctx, al_get_time());
-	return 1;
-}
-
-static duk_ret_t
-js_GetTime(duk_context* ctx)
-{
-	duk_push_number(ctx, floor(al_get_time() * 1000));
 	return 1;
 }
 
@@ -874,39 +876,6 @@ js_Assert(duk_context* ctx)
 		}
 	}
 	duk_dup(ctx, 0);
-	return 1;
-}
-
-static duk_ret_t
-js_CreateStringFromCode(duk_context* ctx)
-{
-	int code = duk_require_int(ctx, 0);
-
-	char cstr[2];
-
-	if (code < 0 || code > 255)
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "CreateStringFromCode(): character code is out of ASCII range (%i)", code);
-	cstr[0] = (char)code; cstr[1] = '\0';
-	duk_push_string(ctx, cstr);
-	return 1;
-}
-
-static duk_ret_t
-js_Delay(duk_context* ctx)
-{
-	double millisecs = floor(duk_require_number(ctx, 0));
-
-	if (millisecs < 0)
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Delay(): delay must be positive (got: %.0f)", millisecs);
-	delay(millisecs / 1000);
-	return 0;
-}
-
-static duk_ret_t
-js_DoEvents(duk_context* ctx)
-{
-	do_events();
-	duk_push_boolean(ctx, true);
 	return 1;
 }
 

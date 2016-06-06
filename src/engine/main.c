@@ -36,7 +36,7 @@ static bool verify_requirements (sandbox_t* fs);
 
 duk_context*         g_duk = NULL;
 ALLEGRO_EVENT_QUEUE* g_events = NULL;
-int                  g_framerate = 0;
+int                  g_framerate = 60;
 sandbox_t*           g_fs = NULL;
 path_t*              g_game_path = NULL;
 path_t*              g_last_game_path = NULL;
@@ -290,6 +290,8 @@ delay(double time)
 	double end_time;
 	double time_left;
 
+	if (time <= 0.0)
+		return;
 	end_time = al_get_time() + time;
 	do {
 		time_left = end_time - al_get_time();
