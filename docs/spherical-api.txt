@@ -146,7 +146,7 @@ Sphere Studio, and minisphere 3.0 introduced the SSJ command-line debugger.  The
 functions below may still come in handy as a sort of "poor man's debugging",
 however:
 
-Abort(message[, stack_offset])
+abort(message[, stack_offset])
 
     Forces the engine to close, displaying a specified error message.  The error
     is normally reported to originate at the location of the Abort() call; you
@@ -159,13 +159,13 @@ Abort(message[, stack_offset])
         }
         PassTheBuck();
 
-Alert(message[, stack_offset])
+alert(message[, stack_offset])
 
     Similar to Abort(), except the message is displayed in a dialog box and the
     game continues running as normal afterwards.  Useful for examining variables
     at runtime when debugging.
 
-Assert(condition, error_message[, stack_offset]);
+assert(condition, error_message[, stack_offset]);
 
     If `condition` evaluates to true, does nothing.  Otherwise the behavior
     depends on whether a debugger is attached.  Without a debugger attached, the
@@ -616,37 +616,6 @@ ApplyColorMask(color);
     day/night effects.
 
 
-Frame Skipping
---------------
-
-minisphere has an aggressive frame skipping algorithm which avoids rendering
-to the backbuffer if it determines that a frame will be late.  This helps keep
-the engine running at full speed even on lower-end computers.  The following
-functions are provided to manage frame skipping.
-
-GetMaxFrameSkips();
-SetMaxFrameSkips(max_skips);
-
-    Gets or sets the maximum number of consecutive frames the engine is allowed
-    to skip.  The default is 5 frames.  If your game uses GrabImage() or
-    GrabSurface() pervasively, it may be useful to set this to zero.  This will
-    almost certainly cause lag, however.
-
-IsSkippedFrame();
-
-    Returns true if the engine has marked the current frame for skipping. Useful
-    to avoid performing extra rendering calculations when nothing is going to be
-    rendered anyway.
-
-UnskipFrame();
-
-    Instructs the engine to re-enable rendering for the current frame if it has
-    been marked for skipping.  This also clears the backbuffer.  This call can
-    be used in lieu of SetMaxFrameSkips(0) during sections which make heavy use
-    of GrabImage() or GrabSurface() without impacting performance for the rest
-    of the game.
-
-
 Galileo Graphics API
 --------------------
 
@@ -957,8 +926,7 @@ GrabSurface(x, y, width, height);
 
     Creates a surface with the contents of the specified portion of the
     backbuffer. If this called during a skipped frame, the content of the
-    created surface is undefined. See the documentation for the Frameskip API
-    above for information on how to mitigate this.
+    created surface is undefined.
 
 Surface:width [read-only]
 Surface:height [read-only]

@@ -44,15 +44,9 @@ static duk_ret_t js_RequireSystemScript   (duk_context* ctx);
 static duk_ret_t js_RequireScript         (duk_context* ctx);
 static duk_ret_t js_EvaluateSystemScript  (duk_context* ctx);
 static duk_ret_t js_EvaluateScript        (duk_context* ctx);
-static duk_ret_t js_IsSkippedFrame        (duk_context* ctx);
-static duk_ret_t js_GetMaxFrameSkips      (duk_context* ctx);
-static duk_ret_t js_GetScreenHeight       (duk_context* ctx);
-static duk_ret_t js_GetScreenWidth        (duk_context* ctx);
-static duk_ret_t js_SetMaxFrameSkips      (duk_context* ctx);
-static duk_ret_t js_Abort                 (duk_context* ctx);
-static duk_ret_t js_Alert                 (duk_context* ctx);
-static duk_ret_t js_Assert                (duk_context* ctx);
-static duk_ret_t js_UnskipFrame           (duk_context* ctx);
+static duk_ret_t js_abort                 (duk_context* ctx);
+static duk_ret_t js_alert                 (duk_context* ctx);
+static duk_ret_t js_assert                (duk_context* ctx);
 
 static vector_t*  s_extensions;
 
@@ -104,20 +98,14 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(ctx, "engine", "exit", js_engine_exit);
 	api_register_static_func(ctx, "engine", "restart", js_engine_restart);
 	api_register_static_func(ctx, "engine", "sleep", js_engine_sleep);
+	api_register_static_func(ctx, NULL, "abort", js_abort);
+	api_register_static_func(ctx, NULL, "alert", js_alert);
+	api_register_static_func(ctx, NULL, "assert", js_assert);
 
 	api_register_method(ctx, NULL, "EvaluateScript", js_EvaluateScript);
 	api_register_method(ctx, NULL, "EvaluateSystemScript", js_EvaluateSystemScript);
 	api_register_method(ctx, NULL, "RequireScript", js_RequireScript);
 	api_register_method(ctx, NULL, "RequireSystemScript", js_RequireSystemScript);
-	api_register_method(ctx, NULL, "IsSkippedFrame", js_IsSkippedFrame);
-	api_register_method(ctx, NULL, "GetMaxFrameSkips", js_GetMaxFrameSkips);
-	api_register_method(ctx, NULL, "GetScreenHeight", js_GetScreenHeight);
-	api_register_method(ctx, NULL, "GetScreenWidth", js_GetScreenWidth);
-	api_register_method(ctx, NULL, "SetMaxFrameSkips", js_SetMaxFrameSkips);
-	api_register_method(ctx, NULL, "Abort", js_Abort);
-	api_register_method(ctx, NULL, "Alert", js_Alert);
-	api_register_method(ctx, NULL, "Assert", js_Assert);
-	api_register_method(ctx, NULL, "UnskipFrame", js_UnskipFrame);
 
 	// initialize subsystem APIs
 	init_audio_api();
@@ -531,6 +519,13 @@ js_engine_get_name(duk_context* ctx)
 }
 
 static duk_ret_t
+js_engine_get_time(duk_context* ctx)
+{
+	duk_push_number(ctx, al_get_time());
+	return 1;
+}
+
+static duk_ret_t
 js_engine_get_version(duk_context* ctx)
 {
 	duk_push_string(ctx, VERSION_NAME);
@@ -664,53 +659,19 @@ js_RequireSystemScript(duk_context* ctx)
 }
 
 static duk_ret_t
-js_IsSkippedFrame(duk_context* ctx)
+js_abort(duk_context* ctx)
 {
-	duk_push_boolean(ctx, screen_is_skipframe(g_screen));
-	return 1;
+	int n_args = duk_get_top(ctx);
+	const char* message = n_args >= 1 ? duk_to_string(ctx, 0) : "Some type of weird pig just ate your game!\n\n\n\n\n\n\n\n...and you*munch*";
+	int stack_offset = n_args >= 2 ? duk_require_int(ctx, 1) : 0;
+
+	if (stack_offset > 0)
+		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Abort(): stack offset must be negative");
+	duk_error_ni(ctx, -1 + stack_offset, DUK_ERR_ERROR, "%s", message);
 }
 
 static duk_ret_t
-js_GetMaxFrameSkips(duk_context* ctx)
-{
-	duk_push_int(ctx, screen_get_frameskip(g_screen));
-	return 1;
-}
-
-static duk_ret_t
-js_GetScreenHeight(duk_context* ctx)
-{
-	duk_push_int(ctx, g_res_y);
-	return 1;
-}
-
-static duk_ret_t
-js_GetScreenWidth(duk_context* ctx)
-{
-	duk_push_int(ctx, g_res_x);
-	return 1;
-}
-
-static duk_ret_t
-js_engine_get_time(duk_context* ctx)
-{
-	duk_push_number(ctx, al_get_time());
-	return 1;
-}
-
-static duk_ret_t
-js_SetMaxFrameSkips(duk_context* ctx)
-{
-	int max_skips = duk_require_int(ctx, 0);
-
-	if (max_skips < 0)
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "SetMaxFrameSkips(): value cannot be negative (%d)", max_skips);
-	screen_set_frameskip(g_screen, max_skips);
-	return 0;
-}
-
-static duk_ret_t
-js_Alert(duk_context* ctx)
+js_alert(duk_context* ctx)
 {
 	int n_args = duk_get_top(ctx);
 	const char* text = n_args >= 1 && !duk_is_null_or_undefined(ctx, 0)
@@ -750,19 +711,7 @@ js_Alert(duk_context* ctx)
 }
 
 static duk_ret_t
-js_Abort(duk_context* ctx)
-{
-	int n_args = duk_get_top(ctx);
-	const char* message = n_args >= 1 ? duk_to_string(ctx, 0) : "Some type of weird pig just ate your game!\n\n\n\n\n\n\n\n...and you*munch*";
-	int stack_offset = n_args >= 2 ? duk_require_int(ctx, 1) : 0;
-
-	if (stack_offset > 0)
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "Abort(): stack offset must be negative");
-	duk_error_ni(ctx, -1 + stack_offset, DUK_ERR_ERROR, "%s", message);
-}
-
-static duk_ret_t
-js_Assert(duk_context* ctx)
+js_assert(duk_context* ctx)
 {
 	const char* filename;
 	int         line_number;
@@ -814,11 +763,4 @@ js_Assert(duk_context* ctx)
 	}
 	duk_dup(ctx, 0);
 	return 1;
-}
-
-static duk_ret_t
-js_UnskipFrame(duk_context* ctx)
-{
-	screen_unskip_frame(g_screen);
-	return 0;
 }

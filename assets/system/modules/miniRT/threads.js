@@ -32,7 +32,7 @@ module.exports = (function()
 	_SetUpdateScript(updateAll);
 	_SetRenderScript(renderAll);
 	SetUpdateScript = SetRenderScript = function() {
-		Abort("API incompatible with miniRT", -1);
+		throw new TypeError("API incompatible with miniRT");
 	}
 
 	return {
@@ -73,7 +73,7 @@ module.exports = (function()
 	//               later in a frame than lower-priority ones.  ignored if no renderer is provided. (default: 0)
 	function create(entity, priority)
 	{
-		Assert(entity instanceof Object || entity === null, "create() argument must be a valid object", -1);
+		assert(entity instanceof Object || entity === null, "create() argument must be a valid object");
 
 		priority = priority !== undefined ? priority : 0;
 
@@ -104,7 +104,7 @@ module.exports = (function()
 	//     threads.create() instead.
 	function createEx(that, threadDesc)
 	{
-		Assert(arguments.length >= 2, "threads.createEx() expects 2 arguments", -1);
+		assert(arguments.length >= 2, "threads.createEx() expects 2 arguments");
 
 		var update = threadDesc.update.bind(that);
 		var render = typeof threadDesc.render === 'function'

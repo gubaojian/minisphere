@@ -59,7 +59,7 @@ module.exports = (function()
 	var scenelet = function(name, def)
 	{
 		if (name in Scene.prototype)
-			Abort("scenes.scenelet(): scenelet ID `" + name + "` already in use", -1);
+			throw new Error("scenelet ID `" + name + "` already in use");
 		Scene.prototype[name] = function() {
 			this.enqueue({
 				arguments: arguments,
@@ -205,7 +205,7 @@ module.exports = (function()
 		function end()
 		{
 			if (openBlockTypes.length == 0)
-				Abort("Mismatched end() in scene definition", -1);
+				throw new Error("Mismatched end() in scene definition");
 			var blockType = openBlockTypes.pop();
 			switch (blockType) {
 				case 'fork':
@@ -243,7 +243,7 @@ module.exports = (function()
 					jump.ifDone = queueToFill.length;
 					break;
 				default:
-					Abort("miniscenes internal error (unknown block type)", -1);
+					throw new Error("Scenario internal error (unknown block type)");
 					break;
 			}
 			return this;
@@ -254,7 +254,7 @@ module.exports = (function()
 		function enqueue(command)
 		{
 			if (isRunning())
-				Abort("attempt to modify scene definition during playback", -2);
+				throw new Error("cannot modify scene definition during playback");
 			queueToFill.push(command);
 		};
 
@@ -307,7 +307,7 @@ module.exports = (function()
 		function run(waitUntilDone)
 		{
 			if (openBlockTypes.length > 0)
-				Abort("unclosed block in scene definition", -1);
+				throw new Error("unclosed block in scene definition");
 			if (isRunning()) return;
 			var ctx = {
 				instructions: queueToFill,
