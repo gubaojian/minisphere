@@ -213,7 +213,7 @@ main(int argc, char* argv[])
 	console_log(1, "loading system default font");
 	if (g_sys_conf != NULL) {
 		filename = kev_read_string(g_sys_conf, "Font", "system.rfn");
-		g_sys_font = load_font(systempath(filename));
+		g_sys_font = font_load(systempath(filename));
 	}
 	if (g_sys_font == NULL) {
 		al_show_native_message_box(screen_display(g_screen), "No System Font Available", "A system font is required.",
@@ -696,9 +696,9 @@ show_error_screen(const char* message)
 		goto show_error_box;
 
 	// create wraptext from error message
-	if (!(error_info = word_wrap_text(g_sys_font, message, g_res_x - 84)))
+	if (!(error_info = wraptext_new(message, g_sys_font, g_res_x - 84)))
 		goto show_error_box;
-	num_lines = get_wraptext_line_count(error_info);
+	num_lines = wraptext_len(error_info);
 
 	// show error in-engine, Sphere 1.x style
 	screen_unskip_frame(g_screen);
@@ -706,21 +706,21 @@ show_error_screen(const char* message)
 	frames_till_close = 30;
 	while (!is_finished) {
 		al_draw_filled_rounded_rectangle(32, 48, g_res_x - 32, g_res_y - 32, 5, 5, al_map_rgba(16, 16, 16, 255));
-		draw_text(g_sys_font, color_new(0, 0, 0, 255), g_res_x / 2 + 1, 11, TEXT_ALIGN_CENTER, title);
-		draw_text(g_sys_font, color_new(255, 255, 255, 255), g_res_x / 2, 10, TEXT_ALIGN_CENTER, title);
-		draw_text(g_sys_font, color_new(0, 0, 0, 255), g_res_x / 2 + 1, 23, TEXT_ALIGN_CENTER, subtitle);
-		draw_text(g_sys_font, color_new(255, 255, 255, 255), g_res_x / 2, 22, TEXT_ALIGN_CENTER, subtitle);
+		font_draw_text(g_sys_font, color_new(0, 0, 0, 255), g_res_x / 2 + 1, 11, TEXT_ALIGN_CENTER, title);
+		font_draw_text(g_sys_font, color_new(255, 255, 255, 255), g_res_x / 2, 10, TEXT_ALIGN_CENTER, title);
+		font_draw_text(g_sys_font, color_new(0, 0, 0, 255), g_res_x / 2 + 1, 23, TEXT_ALIGN_CENTER, subtitle);
+		font_draw_text(g_sys_font, color_new(255, 255, 255, 255), g_res_x / 2, 22, TEXT_ALIGN_CENTER, subtitle);
 		for (i = 0; i < num_lines; ++i) {
-			line_text = get_wraptext_line(error_info, i);
-			draw_text(g_sys_font, color_new(0, 0, 0, 255),
-				g_res_x / 2 + 1, 59 + i * get_font_line_height(g_sys_font),
+			line_text = wraptext_line(error_info, i);
+			font_draw_text(g_sys_font, color_new(0, 0, 0, 255),
+				g_res_x / 2 + 1, 59 + i * font_height(g_sys_font),
 				TEXT_ALIGN_CENTER, line_text);
-			draw_text(g_sys_font, color_new(192, 192, 192, 255),
-				g_res_x / 2, 58 + i * get_font_line_height(g_sys_font),
+			font_draw_text(g_sys_font, color_new(192, 192, 192, 255),
+				g_res_x / 2, 58 + i * font_height(g_sys_font),
 				TEXT_ALIGN_CENTER, line_text);
 		}
 		if (frames_till_close <= 0) {
-			draw_text(g_sys_font, color_new(255, 255, 255, 255), g_res_x / 2, g_res_y - 10 - get_font_line_height(g_sys_font),
+			font_draw_text(g_sys_font, color_new(255, 255, 255, 255), g_res_x / 2, g_res_y - 10 - font_height(g_sys_font),
 				TEXT_ALIGN_CENTER,
 				is_copied ? "[Space]/[Esc] to close" : "[Ctrl+C] to copy, [Space]/[Esc] to close");
 		}
@@ -744,7 +744,7 @@ show_error_screen(const char* message)
 			--frames_till_close;
 		}
 	}
-	free_wraptext(error_info);
+	wraptext_free(error_info);
 	shutdown_engine();
 	exit(EXIT_SUCCESS);
 

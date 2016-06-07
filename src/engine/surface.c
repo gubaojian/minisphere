@@ -511,26 +511,47 @@ js_Surface_createImage(duk_context* ctx)
 static duk_ret_t
 js_Surface_drawText(duk_context* ctx)
 {
-	font_t* font = duk_require_sphere_obj(ctx, 0, "Font");
-	int x = duk_require_int(ctx, 1);
-	int y = duk_require_int(ctx, 2);
-	const char* text = duk_to_string(ctx, 3);
-	
-	int      blend_mode;
-	color_t  color;
-	image_t* image;
+	color_t     color;
+	font_t*     font;
+	int         height;
+	int         num_args;
+	image_t*    surface;
+	const char* text;
+	int         width;
+	wraptext_t* wraptext;
+	int         x;
+	int         y;
 
+	int i;
+
+	num_args = duk_get_top(ctx);
 	duk_push_this(ctx);
-	image = duk_require_sphere_obj(ctx, -1, "Surface");
-	duk_get_prop_string(ctx, -1, "\xFF" "blend_mode");
-	blend_mode = duk_get_int(ctx, -1); duk_pop(ctx);
+	surface = duk_require_sphere_obj(ctx, -1, "Surface");
+	x = duk_require_int(ctx, 0);
+	y = duk_require_int(ctx, 1);
+	text = duk_to_string(ctx, 2);
+	font = duk_require_sphere_obj(ctx, 3, "Font");
+	color = num_args >= 5 ? duk_require_sphere_color(ctx, 4)
+		: color_new(255, 255, 255, 255);
+	width = num_args >= 6 ? duk_require_int(ctx, 5) : 0;
 
-	duk_get_prop_string(ctx, 0, "\xFF" "color_mask"); color = duk_require_sphere_color(ctx, -1); duk_pop(ctx);
-	apply_blend_mode(blend_mode);
-	al_set_target_bitmap(get_image_bitmap(image));
-	draw_text(font, color, x, y, TEXT_ALIGN_LEFT, text);
-	al_set_target_backbuffer(screen_display(g_screen));
-	reset_blender();
+	if (surface == NULL && screen_is_skipframe(g_screen))
+		return 0;
+	else {
+		if (surface != NULL)
+			al_set_target_bitmap(get_image_bitmap(surface));
+		if (num_args < 6)
+			font_draw_text(font, color, x, y, TEXT_ALIGN_LEFT, text);
+		else {
+			wraptext = wraptext_new(text, font, width);
+			height = font_height(font);
+			for (i = 0; i < wraptext_len(wraptext); ++i)
+				font_draw_text(font, color, x, y + i * height, TEXT_ALIGN_LEFT, wraptext_line(wraptext, i));
+			wraptext_free(wraptext);
+		}
+		if (surface != NULL)
+			al_set_target_backbuffer(screen_display(g_screen));
+	}
 	return 0;
 }
 

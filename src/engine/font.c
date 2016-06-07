@@ -7,22 +7,13 @@
 #include "image.h"
 #include "unicode.h"
 
-static duk_ret_t js_LoadFont               (duk_context* ctx);
-static duk_ret_t js_Font_get_Default       (duk_context* ctx);
-static duk_ret_t js_new_Font               (duk_context* ctx);
-static duk_ret_t js_Font_finalize          (duk_context* ctx);
-static duk_ret_t js_Font_get_colorMask     (duk_context* ctx);
-static duk_ret_t js_Font_set_colorMask     (duk_context* ctx);
-static duk_ret_t js_Font_get_height        (duk_context* ctx);
-static duk_ret_t js_Font_getCharacterImage (duk_context* ctx);
-static duk_ret_t js_Font_setCharacterImage (duk_context* ctx);
-static duk_ret_t js_Font_getStringHeight   (duk_context* ctx);
-static duk_ret_t js_Font_getStringWidth    (duk_context* ctx);
-static duk_ret_t js_Font_clone             (duk_context* ctx);
-static duk_ret_t js_Font_drawText          (duk_context* ctx);
-static duk_ret_t js_Font_drawTextBox       (duk_context* ctx);
-static duk_ret_t js_Font_drawZoomedText    (duk_context* ctx);
-static duk_ret_t js_Font_wordWrapString    (duk_context* ctx);
+static duk_ret_t js_Font_get_Default     (duk_context* ctx);
+static duk_ret_t js_new_Font             (duk_context* ctx);
+static duk_ret_t js_Font_finalize        (duk_context* ctx);
+static duk_ret_t js_Font_get_height      (duk_context* ctx);
+static duk_ret_t js_Font_getStringHeight (duk_context* ctx);
+static duk_ret_t js_Font_getStringWidth  (duk_context* ctx);
+static duk_ret_t js_Font_wordWrap        (duk_context* ctx);
 
 static void update_font_metrics (font_t* font);
 
@@ -70,7 +61,7 @@ struct rfn_glyph_header
 static unsigned int s_next_font_id = 0;
 
 font_t*
-load_font(const char* filename)
+font_load(const char* filename)
 {
 	image_t*                atlas = NULL;
 	int                     atlas_x, atlas_y;
@@ -165,7 +156,7 @@ load_font(const char* filename)
 	free_image(atlas);
 	
 	font->id = s_next_font_id++;
-	return ref_font(font);
+	return font_ref(font);
 
 on_error:
 	console_log(2, "failed to load font #%u", s_next_font_id++);
@@ -183,58 +174,14 @@ on_error:
 }
 
 font_t*
-clone_font(const font_t* src_font)
-{
-	font_t*                  font = NULL;
-	int                      max_x = 0, max_y = 0;
-	int                      min_width = INT_MAX;
-	const struct font_glyph* src_glyph;
-
-	uint32_t i;
-
-	console_log(2, "cloning font #%u from source font #%u", s_next_font_id, src_font->id);
-	
-	if (!(font = calloc(1, sizeof(font_t)))) goto on_error;
-	if (!(font->glyphs = calloc(src_font->num_glyphs, sizeof(struct font_glyph))))
-		goto on_error;
-	font->num_glyphs = src_font->num_glyphs;
-
-	// perform the clone
-	get_font_metrics(src_font, &min_width, &max_x, &max_y);
-	font->height = max_y;
-	font->min_width = min_width;
-	font->max_width = max_x;
-	for (i = 0; i < src_font->num_glyphs; ++i) {
-		src_glyph = &src_font->glyphs[i];
-		font->glyphs[i].image = ref_image(src_glyph->image);
-		font->glyphs[i].width = src_glyph->width;
-		font->glyphs[i].height = src_glyph->height;
-	}
-
-	font->id = s_next_font_id++;
-	return ref_font(font);
-
-on_error:
-	if (font != NULL) {
-		for (i = 0; i < font->num_glyphs; ++i) {
-			if (font->glyphs[i].image != NULL)
-				free_image(font->glyphs[i].image);
-		}
-		free(font->glyphs);
-		free(font);
-	}
-	return NULL;
-}
-
-font_t*
-ref_font(font_t* font)
+font_ref(font_t* font)
 {
 	++font->refcount;
 	return font;
 }
 
 void
-free_font(font_t* font)
+font_free(font_t* font)
 {
 	uint32_t i;
 	
@@ -249,34 +196,34 @@ free_font(font_t* font)
 	free(font);
 }
 
+image_t*
+font_glyph_image(const font_t* font, int codepoint)
+{
+	return font->glyphs[codepoint].image;
+}
+
 int
-get_font_line_height(const font_t* font)
+font_glyph_width(const font_t* font, int codepoint)
+{
+	return font->glyphs[codepoint].width;
+}
+
+int
+font_height(const font_t* font)
 {
 	return font->height;
 }
 
 void
-get_font_metrics(const font_t* font, int* out_min_width, int* out_max_width, int* out_line_height)
+font_get_metrics(const font_t* font, int* out_min_width, int* out_max_width, int* out_line_height)
 {
 	if (out_min_width) *out_min_width = font->min_width;
 	if (out_max_width) *out_max_width = font->max_width;
 	if (out_line_height) *out_line_height = font->height;
 }
 
-image_t*
-get_glyph_image(const font_t* font, int codepoint)
-{
-	return font->glyphs[codepoint].image;
-}
-
 int
-get_glyph_width(const font_t* font, int codepoint)
-{
-	return font->glyphs[codepoint].width;
-}
-
-int
-get_text_width(const font_t* font, const char* text)
+font_get_width(const font_t* font, const char* text)
 {
 	uint8_t  ch_byte;
 	uint32_t cp;
@@ -326,22 +273,7 @@ get_text_width(const font_t* font, const char* text)
 }
 
 void
-set_glyph_image(font_t* font, int codepoint, image_t* image)
-{
-	image_t*           old_image;
-	struct font_glyph* p_glyph;
-	
-	p_glyph = &font->glyphs[codepoint];
-	old_image = p_glyph->image;
-	p_glyph->image = ref_image(image);
-	p_glyph->width = get_image_width(image);
-	p_glyph->height = get_image_height(image);
-	update_font_metrics(font);
-	free_image(old_image);
-}
-
-void
-draw_text(const font_t* font, color_t color, int x, int y, text_align_t alignment, const char* text)
+font_draw_text(const font_t* font, color_t color, int x, int y, text_align_t alignment, const char* text)
 {
 	uint8_t  ch_byte;
 	uint32_t cp;
@@ -349,9 +281,9 @@ draw_text(const font_t* font, color_t color, int x, int y, text_align_t alignmen
 	uint32_t utf8state;
 	
 	if (alignment == TEXT_ALIGN_CENTER)
-		x -= get_text_width(font, text) / 2;
+		x -= font_get_width(font, text) / 2;
 	else if (alignment == TEXT_ALIGN_RIGHT)
-		x -= get_text_width(font, text);
+		x -= font_get_width(font, text);
 	
 	tab_width = font->glyphs[' '].width * 3;
 	al_hold_bitmap_drawing(true);
@@ -404,7 +336,7 @@ draw_text(const font_t* font, color_t color, int x, int y, text_align_t alignmen
 }
 
 wraptext_t*
-word_wrap_text(const font_t* font, const char* text, int width)
+wraptext_new(const char* text, const font_t* font, int width)
 {
 	char*       buffer = NULL;
 	uint8_t     ch_byte;
@@ -430,7 +362,7 @@ word_wrap_text(const font_t* font, const char* text, int width)
 	if (!(wraptext = calloc(1, sizeof(wraptext_t)))) goto on_error;
 	
 	// allocate initial buffer
-	get_font_metrics(font, &glyph_width, NULL, NULL);
+	font_get_metrics(font, &glyph_width, NULL, NULL);
 	pitch = 4 * (glyph_width > 0 ? width / glyph_width : width) + 3;
 	if (!(buffer = malloc(max_lines * pitch))) goto on_error;
 	if (!(carry = malloc(pitch))) goto on_error;
@@ -484,7 +416,7 @@ word_wrap_text(const font_t* font, const char* text, int width)
 			break;
 		case '\t':  // tab
 			line_buffer[line_length++] = cp;
-			line_width += get_text_width(font, "   ");
+			line_width += font_get_width(font, "   ");
 			is_line_end = false;
 			break;
 		case '\0':  // NUL terminator
@@ -493,7 +425,7 @@ word_wrap_text(const font_t* font, const char* text, int width)
 		default:  // default case, copy character as-is
 			memcpy(line_buffer + line_length, start, ch_size);
 			line_length += ch_size;
-			line_width += get_glyph_width(font, cp);
+			line_width += font_glyph_width(font, cp);
 			is_line_end = false;
 		}
 		if (is_line_end) carry[0] = '\0';
@@ -524,7 +456,7 @@ word_wrap_text(const font_t* font, const char* text, int width)
 			memset(line_buffer, 0, pitch);  // fill line with NULs
 
 			// copy carry text into new line
-			line_width = get_text_width(font, carry);
+			line_width = font_get_width(font, carry);
 			line_length = strlen(carry);
 			strcpy(line_buffer, carry);
 		}
@@ -542,20 +474,20 @@ on_error:
 }
 
 void
-free_wraptext(wraptext_t* wraptext)
+wraptext_free(wraptext_t* wraptext)
 {
 	free(wraptext->buffer);
 	free(wraptext);
 }
 
 const char*
-get_wraptext_line(const wraptext_t* wraptext, int line_index)
+wraptext_line(const wraptext_t* wraptext, int line_index)
 {
 	return wraptext->buffer + line_index * wraptext->pitch;
 }
 
 int
-get_wraptext_line_count(const wraptext_t* wraptext)
+wraptext_len(const wraptext_t* wraptext)
 {
 	return wraptext->num_lines;
 }
@@ -584,46 +516,20 @@ void
 init_font_api(duk_context* ctx)
 {
 	// Font object
-	api_register_method(ctx, NULL, "LoadFont", js_LoadFont);
 	api_register_ctor(ctx, "Font", js_new_Font, js_Font_finalize);
 	api_register_static_prop(ctx, "Font", "Default", js_Font_get_Default, NULL);
-	api_register_prop(ctx, "Font", "colorMask", js_Font_get_colorMask, js_Font_set_colorMask);
 	api_register_prop(ctx, "Font", "height", js_Font_get_height, NULL);
-	api_register_method(ctx, "Font", "getCharacterImage", js_Font_getCharacterImage);
-	api_register_method(ctx, "Font", "getColorMask", js_Font_get_colorMask);
-	api_register_method(ctx, "Font", "getHeight", js_Font_get_height);
 	api_register_method(ctx, "Font", "getStringHeight", js_Font_getStringHeight);
 	api_register_method(ctx, "Font", "getStringWidth", js_Font_getStringWidth);
-	api_register_method(ctx, "Font", "setCharacterImage", js_Font_setCharacterImage);
-	api_register_method(ctx, "Font", "setColorMask", js_Font_set_colorMask);
-	api_register_method(ctx, "Font", "clone", js_Font_clone);
-	api_register_method(ctx, "Font", "drawText", js_Font_drawText);
-	api_register_method(ctx, "Font", "drawTextBox", js_Font_drawTextBox);
-	api_register_method(ctx, "Font", "drawZoomedText", js_Font_drawZoomedText);
-	api_register_method(ctx, "Font", "wordWrapString", js_Font_wordWrapString);
+	api_register_method(ctx, "Font", "wordWrap", js_Font_wordWrap);
 }
 
 void
 duk_push_sphere_font(duk_context* ctx, font_t* font)
 {
-	duk_push_sphere_obj(ctx, "Font", ref_font(font));
+	duk_push_sphere_obj(ctx, "Font", font_ref(font));
 	duk_push_sphere_color(ctx, color_new(255, 255, 255, 255));
 	duk_put_prop_string(ctx, -2, "\xFF" "color_mask");
-}
-
-static duk_ret_t
-js_LoadFont(duk_context* ctx)
-{
-	const char* filename;
-	font_t*     font;
-
-	filename = duk_require_path(ctx, 0, "fonts", true);
-	font = load_font(filename);
-	if (font == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to load font `%s`", filename);
-	duk_push_sphere_font(ctx, font);
-	free_font(font);
-	return 1;
 }
 
 static duk_ret_t
@@ -650,11 +556,11 @@ js_new_Font(duk_context* ctx)
 	font_t*     font;
 
 	filename = duk_require_path(ctx, 0, NULL, false);
-	font = load_font(filename);
+	font = font_load(filename);
 	if (font == NULL)
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to load font `%s`", filename);
 	duk_push_sphere_font(ctx, font);
-	free_font(font);
+	font_free(font);
 	return 1;
 }
 
@@ -664,42 +570,7 @@ js_Font_finalize(duk_context* ctx)
 	font_t* font;
 
 	font = duk_require_sphere_obj(ctx, 0, "Font");
-	free_font(font);
-	return 0;
-}
-
-static duk_ret_t
-js_Font_getCharacterImage(duk_context* ctx)
-{
-	int cp = duk_require_int(ctx, 0);
-
-	font_t* font;
-	
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_pop(ctx);
-	duk_push_sphere_image(ctx, get_glyph_image(font, cp));
-	return 1;
-}
-
-static duk_ret_t
-js_Font_get_colorMask(duk_context* ctx)
-{
-	duk_push_this(ctx);
-	duk_get_prop_string(ctx, -1, "\xFF" "color_mask");
-	duk_remove(ctx, -2);
-	return 1;
-}
-
-static duk_ret_t
-js_Font_set_colorMask(duk_context* ctx)
-{
-	font_t* font;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_dup(ctx, 0); duk_put_prop_string(ctx, -2, "\xFF" "color_mask"); duk_pop(ctx);
-	duk_pop(ctx);
+	font_free(font);
 	return 0;
 }
 
@@ -711,127 +582,8 @@ js_Font_get_height(duk_context* ctx)
 	duk_push_this(ctx);
 	font = duk_require_sphere_obj(ctx, -1, "Font");
 	duk_pop(ctx);
-	duk_push_int(ctx, get_font_line_height(font));
+	duk_push_int(ctx, font_height(font));
 	return 1;
-}
-
-static duk_ret_t
-js_Font_setCharacterImage(duk_context* ctx)
-{
-	int cp = duk_require_int(ctx, 0);
-	image_t* image = duk_require_sphere_image(ctx, 1);
-
-	font_t* font;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_pop(ctx);
-	set_glyph_image(font, cp, image);
-	return 0;
-}
-
-static duk_ret_t
-js_Font_clone(duk_context* ctx)
-{
-	font_t* dolly_font;
-	font_t* font;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_pop(ctx);
-	if (!(dolly_font = clone_font(font)))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Font:clone(): unable to clone font");
-	duk_push_sphere_font(ctx, dolly_font);
-	return 1;
-}
-
-static duk_ret_t
-js_Font_drawText(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	const char* text = duk_to_string(ctx, 2);
-	
-	font_t* font;
-	color_t mask;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_get_prop_string(ctx, -1, "\xFF" "color_mask"); mask = duk_require_sphere_color(ctx, -1); duk_pop(ctx);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen))
-		draw_text(font, mask, x, y, TEXT_ALIGN_LEFT, text);
-	return 0;
-}
-
-static duk_ret_t
-js_Font_drawZoomedText(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	float scale = duk_require_number(ctx, 2);
-	const char* text = duk_to_string(ctx, 3);
-	
-	ALLEGRO_BITMAP* bitmap;
-	font_t*         font;
-	color_t         mask;
-	int             text_w, text_h;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_get_prop_string(ctx, -1, "\xFF" "color_mask"); mask = duk_require_sphere_color(ctx, -1); duk_pop(ctx);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen)) {
-		text_w = get_text_width(font, text);
-		text_h = get_font_line_height(font);
-		bitmap = al_create_bitmap(text_w, text_h);
-		al_set_target_bitmap(bitmap);
-		draw_text(font, mask, 0, 0, TEXT_ALIGN_LEFT, text);
-		al_set_target_backbuffer(screen_display(g_screen));
-		al_draw_scaled_bitmap(bitmap, 0, 0, text_w, text_h, x, y, text_w * scale, text_h * scale, 0x0);
-		al_destroy_bitmap(bitmap);
-	}
-	return 0;
-}
-
-static duk_ret_t
-js_Font_drawTextBox(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	int w = duk_require_int(ctx, 2);
-	int h = duk_require_int(ctx, 3);
-	int offset = duk_require_int(ctx, 4);
-	const char* text = duk_to_string(ctx, 5);
-
-	font_t*     font;
-	int         line_height;
-	const char* line_text;
-	color_t     mask;
-	int         num_lines;
-
-	int i;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_get_prop_string(ctx, -1, "\xFF" "color_mask"); mask = duk_require_sphere_color(ctx, -1); duk_pop(ctx);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen)) {
-		duk_push_c_function(ctx, js_Font_wordWrapString, DUK_VARARGS);
-		duk_push_this(ctx);
-		duk_push_string(ctx, text);
-		duk_push_int(ctx, w);
-		duk_call_method(ctx, 2);
-		duk_get_prop_string(ctx, -1, "length"); num_lines = duk_get_int(ctx, -1); duk_pop(ctx);
-		line_height = get_font_line_height(font);
-		for (i = 0; i < num_lines; ++i) {
-			duk_get_prop_index(ctx, -1, i); line_text = duk_get_string(ctx, -1); duk_pop(ctx);
-			draw_text(font, mask, x + offset, y, TEXT_ALIGN_LEFT, line_text);
-			y += line_height;
-		}
-		duk_pop(ctx);
-	}
-	return 0;
 }
 
 static duk_ret_t
@@ -846,14 +598,14 @@ js_Font_getStringHeight(duk_context* ctx)
 	duk_push_this(ctx);
 	font = duk_require_sphere_obj(ctx, -1, "Font");
 	duk_pop(ctx);
-	duk_push_c_function(ctx, js_Font_wordWrapString, DUK_VARARGS);
+	duk_push_c_function(ctx, js_Font_wordWrap, DUK_VARARGS);
 	duk_push_this(ctx);
 	duk_push_string(ctx, text);
 	duk_push_int(ctx, width);
 	duk_call_method(ctx, 2);
 	duk_get_prop_string(ctx, -1, "length"); num_lines = duk_get_int(ctx, -1); duk_pop(ctx);
 	duk_pop(ctx);
-	duk_push_int(ctx, get_font_line_height(font) * num_lines);
+	duk_push_int(ctx, font_height(font) * num_lines);
 	return 1;
 }
 
@@ -867,12 +619,12 @@ js_Font_getStringWidth(duk_context* ctx)
 	duk_push_this(ctx);
 	font = duk_require_sphere_obj(ctx, -1, "Font");
 	duk_pop(ctx);
-	duk_push_int(ctx, get_text_width(font, text));
+	duk_push_int(ctx, font_get_width(font, text));
 	return 1;
 }
 
 static duk_ret_t
-js_Font_wordWrapString(duk_context* ctx)
+js_Font_wordWrap(duk_context* ctx)
 {
 	const char* text = duk_to_string(ctx, 0);
 	int         width = duk_require_int(ctx, 1);
@@ -886,13 +638,13 @@ js_Font_wordWrapString(duk_context* ctx)
 	duk_push_this(ctx);
 	font = duk_require_sphere_obj(ctx, -1, "Font");
 	duk_pop(ctx);
-	wraptext = word_wrap_text(font, text, width);
-	num_lines = get_wraptext_line_count(wraptext);
+	wraptext = wraptext_new(text, font, width);
+	num_lines = wraptext_len(wraptext);
 	duk_push_array(ctx);
 	for (i = 0; i < num_lines; ++i) {
-		duk_push_string(ctx, get_wraptext_line(wraptext, i));
+		duk_push_string(ctx, wraptext_line(wraptext, i));
 		duk_put_prop_index(ctx, -2, i);
 	}
-	free_wraptext(wraptext);
+	wraptext_free(wraptext);
 	return 1;
 }

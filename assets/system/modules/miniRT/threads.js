@@ -172,7 +172,6 @@ module.exports = (function()
 	// Renders the current frame by calling all active threads' renderers.
 	function renderAll()
 	{
-		if (IsSkippedFrame()) return;
 		link(link(threads).sort(threadSorter))
 			.where(function(thread) { return thread.isValid; })
 			.where(function(thread) { return thread.renderer !== undefined; })

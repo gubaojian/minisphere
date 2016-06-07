@@ -19,7 +19,7 @@ module.exports = (function() {
 	var visible = { yes: false, fade: 0.0, line: 0.0 };
 	var wasKeyDown = false;
 
-	var numLines = Math.floor((screen.height - 32) / font.getHeight());
+	var numLines = Math.floor((screen.height - 32) / font.height);
 	var logFileName = 'logPath' in game ? engine.game.logPath : null;
 	var bufferSize = 1000;
 	var prompt = "$";
@@ -189,19 +189,14 @@ module.exports = (function() {
 		var boxY = -22 * (1.0 - visible.fade);
 		Rectangle(0, boxY, screen.width, 22, new Color(0, 0, 0, visible.fade * 224));
 		var promptWidth = font.getStringWidth(prompt + " ");
-		font.setColorMask(new Color(0, 0, 0, visible.fade * 192));
-		font.drawText(6, 6 + boxY, prompt);
-		font.setColorMask(new Color(128, 128, 128, visible.fade * 192));
-		font.drawText(5, 5 + boxY, prompt);
-		font.setColorMask(new Color(0, 0, 0, visible.fade * 192));
-		font.drawText(6 + promptWidth, 6 + boxY, entry);
-		font.setColorMask(new Color(255, 255, 128, visible.fade * 192));
-		font.drawText(5 + promptWidth, 5 + boxY, entry);
-		font.setColorMask(cursorColor);
-		font.drawText(5 + promptWidth + font.getStringWidth(entry), 5 + boxY, "_");
+		screen.drawText(6, 6 + boxY, prompt, font, Color.Black.fade(visible.fade * 192));
+		screen.drawText(5, 5 + boxY, prompt, font, Color.Gray.fade(visible.fade * 192));
+		screen.drawText(6 + promptWidth, 6 + boxY, entry, font, Color.Black.fade(visible.fade * 192));
+		screen.drawText(5 + promptWidth, 5 + boxY, entry, font, new Color(255, 255, 128, visible.fade * 192));
+		screen.drawText(5 + promptWidth + font.getStringWidth(entry), 5 + boxY, "_", font, cursorColor);
 
 		// ...then the console output
-		var boxHeight = numLines * font.getHeight() + 10;
+		var boxHeight = numLines * font.height + 10;
 		var boxY = screen.height - boxHeight * visible.fade;
 		Rectangle(0, boxY, screen.width, boxHeight, new Color(0, 0, 0, visible.fade * 192));
 		var oldClip = GetClippingRectangle();
@@ -210,12 +205,10 @@ module.exports = (function() {
 			var lineToDraw = (nextLine - numLines) + i - Math.floor(visible.line);
 			var lineInBuffer = lineToDraw % bufferSize;
 			if (lineToDraw >= 0 && buffer[lineInBuffer] != null) {
-				var y = boxY + 5 + i * font.getHeight();
-				y += (visible.line - Math.floor(visible.line)) * font.getHeight();
-				font.setColorMask(new Color(0, 0, 0, visible.fade * 192));
-				font.drawText(6, y + 1, buffer[lineInBuffer]);
-				font.setColorMask(new Color(255, 255, 255, visible.fade * 192));
-				font.drawText(5, y, buffer[lineInBuffer]);
+				var y = boxY + 5 + i * font.height;
+				y += (visible.line - Math.floor(visible.line)) * font.height;
+				screen.drawText(6, y + 1, buffer[lineInBuffer], font, Color.Black.fade(visible.fade * 192));
+				screen.drawText(5, y, buffer[lineInBuffer], font, Color.White.fade(visible.fade * 192));
 			}
 		}
 		SetClippingRectangle(oldClip.x, oldClip.y, oldClip.width, oldClip.height);
