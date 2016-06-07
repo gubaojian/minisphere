@@ -186,8 +186,8 @@ main(int argc, char* argv[])
 	// only request bare OpenGL. keep in mind that if this happens, shader support will be
 	// disabled.
 	get_sgm_resolution(g_fs, &g_res_x, &g_res_y);
-	if (!(icon = load_image("icon.png")))
-		icon = load_image("#/icon.png");
+	if (!(icon = image_load("icon.png")))
+		icon = image_load("#/icon.png");
 	g_screen = screen_new(get_sgm_name(g_fs), icon, g_res_x, g_res_y, use_frameskip, !use_conserve_cpu);
 	if (g_screen == NULL) {
 		al_show_native_message_box(NULL, "Unable to Create Render Context", "minisphere was unable to create a render context.",

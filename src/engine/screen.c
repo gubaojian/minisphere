@@ -10,9 +10,6 @@
 #include "image.h"
 #include "matrix.h"
 
-static duk_ret_t js_GetClippingRectangle   (duk_context* ctx);
-static duk_ret_t js_SetClippingRectangle   (duk_context* ctx);
-
 struct screen
 {
 	bool             avoid_sleep;
@@ -84,9 +81,9 @@ screen_new(const char* title, image_t* icon, int x_size, int y_size, int framesk
 		al_set_new_bitmap_flags(
 			ALLEGRO_NO_PREMULTIPLIED_ALPHA | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR
 			| bitmap_flags);
-		icon = clone_image(icon);
-		rescale_image(icon, 32, 32);
-		icon_bitmap = get_image_bitmap(icon);
+		icon = image_clone(icon);
+		image_resize(icon, 32, 32);
+		icon_bitmap = image_bitmap(icon);
 		al_set_new_bitmap_flags(bitmap_flags);
 		al_set_display_icon(display, icon_bitmap);
 	}
@@ -352,18 +349,18 @@ screen_grab(screen_t* obj, int x, int y, int width, int height)
 	scale_width = width * obj->x_scale;
 	scale_height = height * obj->y_scale;
 	
-	if (!(image = create_image(scale_width, scale_height)))
+	if (!(image = image_new(scale_width, scale_height)))
 		goto on_error;
 	backbuffer = al_get_backbuffer(obj->display);
-	al_set_target_bitmap(get_image_bitmap(image));
+	al_set_target_bitmap(image_bitmap(image));
 	al_draw_bitmap_region(backbuffer, x, y, scale_width, scale_height, 0, 0, 0x0);
 	al_set_target_backbuffer(obj->display);
-	if (!rescale_image(image, width, height))
+	if (!image_resize(image, width, height))
 		goto on_error;
 	return image;
 
 on_error:
-	free_image(image);
+	image_free(image);
 	return NULL;
 }
 
@@ -466,37 +463,4 @@ refresh_display(screen_t* obj)
 	
 	screen_transform(obj, NULL);
 	screen_set_clipping(obj, obj->clip_rect);
-}
-
-void
-init_screen_api(void)
-{
-	api_register_method(g_duk, NULL, "GetClippingRectangle", js_GetClippingRectangle);
-	api_register_method(g_duk, NULL, "SetClippingRectangle", js_SetClippingRectangle);
-}
-
-static duk_ret_t
-js_GetClippingRectangle(duk_context* ctx)
-{
-	rect_t clip;
-
-	clip = screen_get_clipping(g_screen);
-	duk_push_object(ctx);
-	duk_push_int(ctx, clip.x1); duk_put_prop_string(ctx, -2, "x");
-	duk_push_int(ctx, clip.y1); duk_put_prop_string(ctx, -2, "y");
-	duk_push_int(ctx, clip.x2 - clip.x1); duk_put_prop_string(ctx, -2, "width");
-	duk_push_int(ctx, clip.y2 - clip.y1); duk_put_prop_string(ctx, -2, "height");
-	return 1;
-}
-
-static duk_ret_t
-js_SetClippingRectangle(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	int width = duk_require_int(ctx, 2);
-	int height = duk_require_int(ctx, 3);
-
-	screen_set_clipping(g_screen, new_rect(x, y, x + width, y + height));
-	return 0;
 }

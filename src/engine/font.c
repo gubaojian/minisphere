@@ -7,15 +7,6 @@
 #include "image.h"
 #include "unicode.h"
 
-static duk_ret_t js_Font_get_Default     (duk_context* ctx);
-static duk_ret_t js_new_Font             (duk_context* ctx);
-static duk_ret_t js_Font_finalize        (duk_context* ctx);
-static duk_ret_t js_Font_get_height      (duk_context* ctx);
-static duk_ret_t js_Font_drawText        (duk_context* ctx);
-static duk_ret_t js_Font_getStringHeight (duk_context* ctx);
-static duk_ret_t js_Font_getStringWidth  (duk_context* ctx);
-static duk_ret_t js_Font_wordWrap        (duk_context* ctx);
-
 static void update_font_metrics (font_t* font);
 
 struct font
@@ -118,12 +109,12 @@ font_load(const char* filename)
 	n_glyphs_per_row = ceil(sqrt(rfn.num_chars));
 	atlas_size_x = max_x * n_glyphs_per_row;
 	atlas_size_y = max_y * n_glyphs_per_row;
-	if ((atlas = create_image(atlas_size_x, atlas_size_y)) == NULL)
+	if ((atlas = image_new(atlas_size_x, atlas_size_y)) == NULL)
 		goto on_error;
 
 	// pass 2: load glyph data
 	sfs_fseek(file, glyph_start, SFS_SEEK_SET);
-	if (!(lock = lock_image(atlas))) goto on_error;
+	if (!(lock = image_lock(atlas))) goto on_error;
 	for (i = 0; i < rfn.num_chars; ++i) {
 		glyph = &font->glyphs[i];
 		if (sfs_fread(&glyph_hdr, sizeof(struct rfn_glyph_header), 1, file) != 1)
@@ -132,7 +123,7 @@ font_load(const char* filename)
 		atlas_y = i / n_glyphs_per_row * max_y;
 		switch (rfn.version) {
 		case 1: // RFN v1: 8-bit grayscale glyphs
-			if (!(glyph->image = create_subimage(atlas, atlas_x, atlas_y, glyph_hdr.width, glyph_hdr.height)))
+			if (!(glyph->image = image_new_slice(atlas, atlas_x, atlas_y, glyph_hdr.width, glyph_hdr.height)))
 				goto on_error;
 			grayscale = malloc(glyph_hdr.width * glyph_hdr.height);
 			if (sfs_fread(grayscale, glyph_hdr.width * glyph_hdr.height, 1, file) != 1)
@@ -147,14 +138,14 @@ font_load(const char* filename)
 			}
 			break;
 		case 2: // RFN v2: 32-bit truecolor glyphs
-			if (!(glyph->image = read_subimage(file, atlas, atlas_x, atlas_y, glyph_hdr.width, glyph_hdr.height)))
+			if (!(glyph->image = image_read_slice(file, atlas, atlas_x, atlas_y, glyph_hdr.width, glyph_hdr.height)))
 				goto on_error;
 			break;
 		}
 	}
-	unlock_image(atlas, lock);
+	image_unlock(atlas, lock);
 	sfs_fclose(file);
-	free_image(atlas);
+	image_free(atlas);
 	
 	font->id = s_next_font_id++;
 	return font_ref(font);
@@ -164,13 +155,13 @@ on_error:
 	sfs_fclose(file);
 	if (font != NULL) {
 		for (i = 0; i < rfn.num_chars; ++i) {
-			if (font->glyphs[i].image != NULL) free_image(font->glyphs[i].image);
+			if (font->glyphs[i].image != NULL) image_free(font->glyphs[i].image);
 		}
 		free(font->glyphs);
 		free(font);
 	}
-	if (lock != NULL) unlock_image(atlas, lock);
-	if (atlas != NULL) free_image(atlas);
+	if (lock != NULL) image_unlock(atlas, lock);
+	if (atlas != NULL) image_free(atlas);
 	return NULL;
 }
 
@@ -191,7 +182,7 @@ font_free(font_t* font)
 	
 	console_log(3, "disposing font #%u no longer in use", font->id);
 	for (i = 0; i < font->num_glyphs; ++i) {
-		free_image(font->glyphs[i].image);
+		image_free(font->glyphs[i].image);
 	}
 	free(font->glyphs);
 	free(font);
@@ -329,7 +320,7 @@ font_draw_text(const font_t* font, color_t color, int x, int y, text_align_t ali
 		else if (cp == '\t')
 			x += tab_width;
 		else {
-			draw_image_masked(font->glyphs[cp].image, color, x, y);
+			image_draw_masked(font->glyphs[cp].image, color, x, y);
 			x += font->glyphs[cp].width;
 		}
 	}
@@ -502,8 +493,8 @@ update_font_metrics(font_t* font)
 	uint32_t i;
 
 	for (i = 0; i < font->num_glyphs; ++i) {
-		font->glyphs[i].width = get_image_width(font->glyphs[i].image);
-		font->glyphs[i].height = get_image_height(font->glyphs[i].image);
+		font->glyphs[i].width = image_width(font->glyphs[i].image);
+		font->glyphs[i].height = image_height(font->glyphs[i].image);
 		min_width = fmin(font->glyphs[i].width, min_width);
 		max_x = fmax(font->glyphs[i].width, max_x);
 		max_y = fmax(font->glyphs[i].height, max_y);
@@ -511,189 +502,4 @@ update_font_metrics(font_t* font)
 	font->min_width = min_width;
 	font->max_width = max_x;
 	font->height = max_y;
-}
-
-void
-init_font_api(duk_context* ctx)
-{
-	// Font object
-	api_register_ctor(ctx, "Font", js_new_Font, js_Font_finalize);
-	api_register_static_prop(ctx, "Font", "Default", js_Font_get_Default, NULL);
-	api_register_prop(ctx, "Font", "height", js_Font_get_height, NULL);
-	api_register_method(ctx, "Font", "drawText", js_Font_drawText);
-	api_register_method(ctx, "Font", "getStringHeight", js_Font_getStringHeight);
-	api_register_method(ctx, "Font", "getStringWidth", js_Font_getStringWidth);
-	api_register_method(ctx, "Font", "wordWrap", js_Font_wordWrap);
-}
-
-void
-duk_push_sphere_font(duk_context* ctx, font_t* font)
-{
-	duk_push_sphere_obj(ctx, "Font", font_ref(font));
-	duk_push_sphere_color(ctx, color_new(255, 255, 255, 255));
-	duk_put_prop_string(ctx, -2, "\xFF" "color_mask");
-}
-
-static duk_ret_t
-js_Font_get_Default(duk_context* ctx)
-{
-	duk_push_sphere_font(ctx, g_sys_font);
-
-	duk_push_this(ctx);
-	duk_push_string(ctx, "Default");
-	duk_dup(ctx, -3);
-	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
-		| DUK_DEFPROP_CLEAR_ENUMERABLE
-		| DUK_DEFPROP_CLEAR_WRITABLE
-		| DUK_DEFPROP_SET_CONFIGURABLE);
-	duk_pop(ctx);
-
-	return 1;
-}
-
-static duk_ret_t
-js_new_Font(duk_context* ctx)
-{
-	const char* filename;
-	font_t*     font;
-
-	filename = duk_require_path(ctx, 0, NULL, false);
-	font = font_load(filename);
-	if (font == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to load font `%s`", filename);
-	duk_push_sphere_font(ctx, font);
-	font_free(font);
-	return 1;
-}
-
-static duk_ret_t
-js_Font_finalize(duk_context* ctx)
-{
-	font_t* font;
-
-	font = duk_require_sphere_obj(ctx, 0, "Font");
-	font_free(font);
-	return 0;
-}
-
-static duk_ret_t
-js_Font_get_height(duk_context* ctx)
-{
-	font_t* font;
-	
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_pop(ctx);
-	duk_push_int(ctx, font_height(font));
-	return 1;
-}
-
-static duk_ret_t
-js_Font_drawText(duk_context* ctx)
-{
-	color_t     color;
-	font_t*     font;
-	int         height;
-	int         num_args;
-	image_t*    surface;
-	const char* text;
-	int         width;
-	wraptext_t* wraptext;
-	int         x;
-	int         y;
-
-	int i;
-
-	num_args = duk_get_top(ctx);
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	surface = duk_require_sphere_obj(ctx, 0, "Surface");
-	x = duk_require_int(ctx, 1);
-	y = duk_require_int(ctx, 2);
-	text = duk_to_string(ctx, 3);
-	color = num_args >= 5 ? duk_require_sphere_color(ctx, 4)
-		: color_new(255, 255, 255, 255);
-	width = num_args >= 6 ? duk_require_int(ctx, 5) : 0;
-
-	if (surface == NULL && screen_is_skipframe(g_screen))
-		return 0;
-	else {
-		if (surface != NULL)
-			al_set_target_bitmap(get_image_bitmap(surface));
-		if (num_args < 6)
-			font_draw_text(font, color, x, y, TEXT_ALIGN_LEFT, text);
-		else {
-			wraptext = wraptext_new(text, font, width);
-			height = font_height(font);
-			for (i = 0; i < wraptext_len(wraptext); ++i)
-				font_draw_text(font, color, x, y + i * height, TEXT_ALIGN_LEFT, wraptext_line(wraptext, i));
-			wraptext_free(wraptext);
-		}
-		if (surface != NULL)
-			al_set_target_backbuffer(screen_display(g_screen));
-	}
-	return 0;
-}
-
-static duk_ret_t
-js_Font_getStringHeight(duk_context* ctx)
-{
-	const char* text = duk_to_string(ctx, 0);
-	int width = duk_require_int(ctx, 1);
-	
-	font_t* font;
-	int     num_lines;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_pop(ctx);
-	duk_push_c_function(ctx, js_Font_wordWrap, DUK_VARARGS);
-	duk_push_this(ctx);
-	duk_push_string(ctx, text);
-	duk_push_int(ctx, width);
-	duk_call_method(ctx, 2);
-	duk_get_prop_string(ctx, -1, "length"); num_lines = duk_get_int(ctx, -1); duk_pop(ctx);
-	duk_pop(ctx);
-	duk_push_int(ctx, font_height(font) * num_lines);
-	return 1;
-}
-
-static duk_ret_t
-js_Font_getStringWidth(duk_context* ctx)
-{
-	const char* text = duk_to_string(ctx, 0);
-	
-	font_t* font;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_pop(ctx);
-	duk_push_int(ctx, font_get_width(font, text));
-	return 1;
-}
-
-static duk_ret_t
-js_Font_wordWrap(duk_context* ctx)
-{
-	const char* text = duk_to_string(ctx, 0);
-	int         width = duk_require_int(ctx, 1);
-	
-	font_t*     font;
-	int         num_lines;
-	wraptext_t* wraptext;
-
-	int i;
-
-	duk_push_this(ctx);
-	font = duk_require_sphere_obj(ctx, -1, "Font");
-	duk_pop(ctx);
-	wraptext = wraptext_new(text, font, width);
-	num_lines = wraptext_len(wraptext);
-	duk_push_array(ctx);
-	for (i = 0; i < num_lines; ++i) {
-		duk_push_string(ctx, wraptext_line(wraptext, i));
-		duk_put_prop_index(ctx, -2, i);
-	}
-	wraptext_free(wraptext);
-	return 1;
 }

@@ -20,12 +20,12 @@ engine_sources=src/engine/main.c \
    src/shared/vector.c src/shared/xoroshiro.c \
    src/engine/api.c src/engine/async.c src/engine/atlas.c src/engine/audio.c \
    src/engine/color.c src/engine/commonjs.c src/engine/console.c \
-   src/engine/debugger.c src/engine/file.c src/engine/font.c \
-   src/engine/galileo.c src/engine/geometry.c src/engine/image.c \
-   src/engine/input.c src/engine/matrix.c src/engine/rng.c \
+   src/engine/debugger.c src/engine/font.c src/engine/galileo.c \
+   src/engine/geometry.c src/engine/image.c src/engine/input.c \
+   src/engine/kevfile.c src/engine/matrix.c src/engine/rng.c \
    src/engine/screen.c src/engine/script.c src/engine/shader.c \
    src/engine/sockets.c src/engine/spherefs.c src/engine/spk.c \
-   src/engine/surface.c src/engine/utility.c
+   src/engine/utility.c
 engine_libs= \
    -lallegro_acodec -lallegro_audio -lallegro_color -lallegro_dialog \
    -lallegro_image -lallegro_memfile -lallegro_primitives -lallegro \

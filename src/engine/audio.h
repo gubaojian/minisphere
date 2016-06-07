@@ -44,6 +44,4 @@ void      stream_pause      (stream_t* stream, bool paused);
 void      stream_play       (stream_t* stream, mixer_t* mixer);
 void      stream_stop       (stream_t* stream);
 
-void init_audio_api (void);
-
 #endif // MINISPHERE__AUDIO_H__INCLUDED

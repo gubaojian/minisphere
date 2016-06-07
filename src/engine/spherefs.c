@@ -1,7 +1,7 @@
 #include "minisphere.h"
 #include "spherefs.h"
 
-#include "file.h"
+#include "kevfile.h"
 #include "spk.h"
 
 enum fs_type
@@ -481,6 +481,125 @@ sfs_ftell(sfs_file_t* file)
 		return spk_ftell(file->spk_file);
 	}
 	return -1;
+}
+
+bool
+sfs_read_int(sfs_file_t* file, intmax_t* p_value, int size, bool little_endian)
+{
+	// NOTE: supports decoding values up to 48-bit (6 bytes).  don't specify
+	//       size > 6 unless you want a segfault!
+
+	uint8_t data[6];
+	int     mul = 1;
+
+	int i;
+
+	if (sfs_fread(data, 1, size, file) != size)
+		return false;
+
+	// variable-sized int decoding adapted from Node.js
+	if (little_endian) {
+		*p_value = data[i = 0];
+		while (++i < size && (mul *= 0x100))
+			*p_value += data[i] * mul;
+	}
+	else {
+		*p_value = data[i = size - 1];
+		while (i > 0 && (mul *= 0x100))
+			*p_value += data[--i] * mul;
+	}
+	if (*p_value >= mul * 0x80)
+		*p_value -= pow(2, 8 * size);
+
+	return true;
+}
+
+bool
+sfs_read_uint(sfs_file_t* file, intmax_t* p_value, int size, bool little_endian)
+{
+	// NOTE: supports decoding values up to 48-bit (6 bytes).  don't specify
+	//       size > 6 unless you want a segfault!
+
+	uint8_t data[6];
+	int     mul = 1;
+
+	int i;
+
+	if (sfs_fread(data, 1, size, file) != size)
+		return false;
+
+	// variable-sized uint decoding adapted from Node.js
+	if (little_endian) {
+		*p_value = data[i = 0];
+		while (++i < size && (mul *= 0x100))
+			*p_value += data[i] * mul;
+	}
+	else {
+		*p_value = data[--size];
+		while (size > 0 && (mul *= 0x100))
+			*p_value += data[--size] * mul;
+	}
+
+	return true;
+}
+
+bool
+sfs_write_int(sfs_file_t* file, intmax_t value, int size, bool little_endian)
+{
+	// NOTE: supports encoding values up to 48-bit (6 bytes).  don't specify
+	//       size > 6 unless you want a segfault!
+
+	uint8_t data[6];
+	int     mul = 1;
+	int     sub = 0;
+
+	int i;
+
+	// variable-sized int encoding adapted from Node.js
+	if (little_endian) {
+		data[i = 0] = value & 0xFF;
+		while (++i < size && (mul *= 0x100)) {
+			if (value < 0 && sub == 0 && data[i - 1] != 0)
+				sub = 1;
+			data[i] = (value / mul - sub) & 0xFF;
+		}
+	}
+	else {
+		data[i = size - 1] = value & 0xFF;
+		while (--i >= 0 && (mul *= 0x100)) {
+			if (value < 0 && sub == 0 && data[i + 1] != 0)
+				sub = 1;
+			data[i] = (value / mul - sub) & 0xFF;
+		}
+	}
+
+	return sfs_fwrite(data, 1, size, file) == size;
+}
+
+bool
+sfs_write_uint(sfs_file_t* file, intmax_t value, int size, bool little_endian)
+{
+	// NOTE: supports encoding values up to 48-bit (6 bytes).  don't specify
+	//       size > 6 unless you want a segfault!
+
+	uint8_t data[6];
+	int     mul = 1;
+
+	int i;
+
+	// variable-sized uint encoding adapted from Node.js
+	if (little_endian) {
+		data[i = 0] = value & 0xFF;
+		while (++i < size && (mul *= 0x100))
+			data[i] = (value / mul) & 0xFF;
+	}
+	else {
+		data[i = size - 1] = value & 0xFF;
+		while (--i >= 0 && (mul *= 0x100))
+			data[i] = (value / mul) & 0xFF;
+	}
+
+	return sfs_fwrite(data, 1, size, file) == size;
 }
 
 size_t

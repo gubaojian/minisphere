@@ -3,7 +3,6 @@
 
 #include "api.h"
 #include "color.h"
-#include "surface.h"
 
 struct image
 {
@@ -19,15 +18,11 @@ struct image
 	image_t*        parent;
 };
 
-static duk_ret_t js_new_Image        (duk_context* ctx);
-static duk_ret_t js_Image_finalize   (duk_context* ctx);
-static duk_ret_t js_Image_get_height (duk_context* ctx);
-static duk_ret_t js_Image_get_width  (duk_context* ctx);
 
 static unsigned int s_next_image_id = 0;
 
 image_t*
-create_image(int width, int height)
+image_new(int width, int height)
 {
 	image_t* image;
 
@@ -38,7 +33,7 @@ create_image(int width, int height)
 	image->id = s_next_image_id++;
 	image->width = al_get_bitmap_width(image->bitmap);
 	image->height = al_get_bitmap_height(image->bitmap);
-	return ref_image(image);
+	return image_ref(image);
 
 on_error:
 	free(image);
@@ -46,7 +41,7 @@ on_error:
 }
 
 image_t*
-create_subimage(image_t* parent, int x, int y, int width, int height)
+image_new_slice(image_t* parent, int x, int y, int width, int height)
 {
 	image_t* image;
 
@@ -57,8 +52,8 @@ create_subimage(image_t* parent, int x, int y, int width, int height)
 	image->id = s_next_image_id++;
 	image->width = al_get_bitmap_width(image->bitmap);
 	image->height = al_get_bitmap_height(image->bitmap);
-	image->parent = ref_image(parent);
-	return ref_image(image);
+	image->parent = image_ref(parent);
+	return image_ref(image);
 
 on_error:
 	free(image);
@@ -66,7 +61,7 @@ on_error:
 }
 
 image_t*
-clone_image(const image_t* src_image)
+image_clone(const image_t* src_image)
 {
 	image_t* image;
 
@@ -80,7 +75,7 @@ clone_image(const image_t* src_image)
 	image->width = al_get_bitmap_width(image->bitmap);
 	image->height = al_get_bitmap_height(image->bitmap);
 	
-	return ref_image(image);
+	return image_ref(image);
 
 on_error:
 	free(image);
@@ -88,7 +83,7 @@ on_error:
 }
 
 image_t*
-load_image(const char* filename)
+image_load(const char* filename)
 {
 	ALLEGRO_FILE* al_file = NULL;
 	const char*   file_ext;
@@ -122,7 +117,7 @@ load_image(const char* filename)
 	image->height = al_get_bitmap_height(image->bitmap);
 	
 	image->id = s_next_image_id++;
-	return ref_image(image);
+	return image_ref(image);
 
 on_error:
 	console_log(2, "    failed to load image #%u", s_next_image_id++);
@@ -134,7 +129,7 @@ on_error:
 }
 
 image_t*
-read_image(sfs_file_t* file, int width, int height)
+image_read(sfs_file_t* file, int width, int height)
 {
 	long                   file_pos;
 	image_t*               image;
@@ -160,7 +155,7 @@ read_image(sfs_file_t* file, int width, int height)
 	image->id = s_next_image_id++;
 	image->width = al_get_bitmap_width(image->bitmap);
 	image->height = al_get_bitmap_height(image->bitmap);
-	return ref_image(image);
+	return image_ref(image);
 
 on_error:
 	console_log(3, "    failed!");
@@ -174,7 +169,7 @@ on_error:
 }
 
 image_t*
-read_subimage(sfs_file_t* file, image_t* parent, int x, int y, int width, int height)
+image_read_slice(sfs_file_t* file, image_t* parent, int x, int y, int width, int height)
 {
 	long          file_pos;
 	image_t*      image;
@@ -184,26 +179,26 @@ read_subimage(sfs_file_t* file, image_t* parent, int x, int y, int width, int he
 	int i_y;
 
 	file_pos = sfs_ftell(file);
-	if (!(image = create_subimage(parent, x, y, width, height))) goto on_error;
-	if (!(lock = lock_image(parent))) goto on_error;
+	if (!(image = image_new_slice(parent, x, y, width, height))) goto on_error;
+	if (!(lock = image_lock(parent))) goto on_error;
 	for (i_y = 0; i_y < height; ++i_y) {
 		pline = lock->pixels + x + (i_y + y) * lock->pitch;
 		if (sfs_fread(pline, width * 4, 1, file) != 1)
 			goto on_error;
 	}
-	unlock_image(parent, lock);
+	image_unlock(parent, lock);
 	return image;
 
 on_error:
 	sfs_fseek(file, file_pos, SEEK_SET);
 	if (lock != NULL)
-		unlock_image(parent, lock);
-	free_image(image);
+		image_unlock(parent, lock);
+	image_free(image);
 	return NULL;
 }
 
 image_t*
-ref_image(image_t* image)
+image_ref(image_t* image)
 {
 	
 	if (image != NULL)
@@ -212,7 +207,7 @@ ref_image(image_t* image)
 }
 
 void
-free_image(image_t* image)
+image_free(image_t* image)
 {
 	if (image == NULL || --image->refcount > 0)
 		return;
@@ -220,57 +215,42 @@ free_image(image_t* image)
 	console_log(3, "disposing image #%u no longer in use",
 		image->id);
 	al_destroy_bitmap(image->bitmap);
-	free_image(image->parent);
+	image_free(image->parent);
 	free(image);
 }
 
 ALLEGRO_BITMAP*
-get_image_bitmap(image_t* image)
+image_bitmap(image_t* image)
 {
 	return image->bitmap;
 }
 
 int
-get_image_height(const image_t* image)
+image_height(const image_t* image)
 {
 	return image->height;
 }
 
 int
-get_image_width(const image_t* image)
+image_width(const image_t* image)
 {
 	return image->width;
 }
 
 void
-blit_image(image_t* image, image_t* target_image, int x, int y)
-{
-	int blend_mode_dest;
-	int blend_mode_src;
-	int blend_op;
-
-	al_set_target_bitmap(get_image_bitmap(target_image));
-	al_get_blender(&blend_op, &blend_mode_src, &blend_mode_dest);
-	al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO);
-	al_draw_bitmap(get_image_bitmap(image), x, y, 0x0);
-	al_set_blender(blend_op, blend_mode_src, blend_mode_dest);
-	al_set_target_backbuffer(screen_display(g_screen));
-}
-
-void
-draw_image(image_t* image, int x, int y)
+image_draw(image_t* image, int x, int y)
 {
 	al_draw_bitmap(image->bitmap, x, y, 0x0);
 }
 
 void
-draw_image_masked(image_t* image, color_t mask, int x, int y)
+image_draw_masked(image_t* image, color_t mask, int x, int y)
 {
 	al_draw_tinted_bitmap(image->bitmap, al_map_rgba(mask.r, mask.g, mask.b, mask.alpha), x, y, 0x0);
 }
 
 void
-draw_image_scaled(image_t* image, int x, int y, int width, int height)
+image_draw_scaled(image_t* image, int x, int y, int width, int height)
 {
 	al_draw_scaled_bitmap(image->bitmap,
 		0, 0, al_get_bitmap_width(image->bitmap), al_get_bitmap_height(image->bitmap),
@@ -278,7 +258,7 @@ draw_image_scaled(image_t* image, int x, int y, int width, int height)
 }
 
 void
-draw_image_scaled_masked(image_t* image, color_t mask, int x, int y, int width, int height)
+image_draw_scaled_masked(image_t* image, color_t mask, int x, int y, int width, int height)
 {
 	al_draw_tinted_scaled_bitmap(image->bitmap, nativecolor(mask),
 		0, 0, al_get_bitmap_width(image->bitmap), al_get_bitmap_height(image->bitmap),
@@ -286,13 +266,13 @@ draw_image_scaled_masked(image_t* image, color_t mask, int x, int y, int width, 
 }
 
 void
-draw_image_tiled(image_t* image, int x, int y, int width, int height)
+image_draw_tiled(image_t* image, int x, int y, int width, int height)
 {
-	draw_image_tiled_masked(image, color_new(255, 255, 255, 255), x, y, width, height);
+	image_draw_tiled_masked(image, color_new(255, 255, 255, 255), x, y, width, height);
 }
 
 void
-draw_image_tiled_masked(image_t* image, color_t mask, int x, int y, int width, int height)
+image_draw_tiled_masked(image_t* image, color_t mask, int x, int y, int width, int height)
 {
 	ALLEGRO_COLOR native_mask = nativecolor(mask);
 	int           img_w, img_h;
@@ -328,7 +308,7 @@ draw_image_tiled_masked(image_t* image, color_t mask, int x, int y, int width, i
 }
 
 void
-fill_image(image_t* image, color_t color)
+image_fill(image_t* image, color_t color)
 {
 	int             clip_x, clip_y, clip_w, clip_h;
 	ALLEGRO_BITMAP* last_target;
@@ -343,14 +323,14 @@ fill_image(image_t* image, color_t color)
 }
 
 image_lock_t*
-lock_image(image_t* image)
+image_lock(image_t* image)
 {
 	ALLEGRO_LOCKED_REGION* ll_lock;
 
 	if (image->lock_count == 0) {
 		if (!(ll_lock = al_lock_bitmap(image->bitmap, ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE, ALLEGRO_LOCK_READWRITE)))
 			return NULL;
-		ref_image(image);
+		image_ref(image);
 		image->lock.pixels = ll_lock->data;
 		image->lock.pitch = ll_lock->pitch / 4;
 		image->lock.num_lines = image->height;
@@ -360,7 +340,7 @@ lock_image(image_t* image)
 }
 
 bool
-rescale_image(image_t* image, int width, int height)
+image_resize(image_t* image, int width, int height)
 {
 	ALLEGRO_BITMAP* new_bitmap;
 	ALLEGRO_BITMAP* old_target;
@@ -383,7 +363,7 @@ rescale_image(image_t* image, int width, int height)
 }
 
 void
-unlock_image(image_t* image, image_lock_t* lock)
+image_unlock(image_t* image, image_lock_t* lock)
 {
 	// if the caller provides the wrong lock pointer, the image
 	// won't be unlocked. this prevents accidental unlocking.
@@ -392,123 +372,5 @@ unlock_image(image_t* image, image_lock_t* lock)
 	if (image->lock_count == 0 || --image->lock_count > 0)
 		return;
 	al_unlock_bitmap(image->bitmap);
-	free_image(image);
-}
-
-void
-init_image_api(duk_context* ctx)
-{
-	api_register_ctor(ctx, "Image", js_new_Image, js_Image_finalize);
-	api_register_prop(ctx, "Image", "height", js_Image_get_height, NULL);
-	api_register_prop(ctx, "Image", "width", js_Image_get_width, NULL);
-}
-
-void
-duk_push_sphere_image(duk_context* ctx, image_t* image)
-{
-	duk_push_sphere_obj(ctx, "Image", ref_image(image));
-}
-
-image_t*
-duk_require_sphere_image(duk_context* ctx, duk_idx_t index)
-{
-	return duk_require_sphere_obj(ctx, index, "Image");
-}
-
-static duk_ret_t
-js_new_Image(duk_context* ctx)
-{
-	const color_t* buffer;
-	size_t         buffer_size;
-	const char*    filename;
-	color_t        fill_color;
-	int            height;
-	image_t*       image;
-	image_lock_t*  lock;
-	int            num_args;
-	color_t*       p_line;
-	image_t*       src_image;
-	int            width;
-
-	int y;
-
-	num_args = duk_get_top(ctx);
-	if (num_args >= 3 && duk_is_sphere_obj(ctx, 2, "Color")) {
-		// create an Image filled with a single pixel value
-		width = duk_require_int(ctx, 0);
-		height = duk_require_int(ctx, 1);
-		fill_color = duk_require_sphere_color(ctx, 2);
-		if (!(image = create_image(width, height)))
-			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Image(): unable to create new image");
-		fill_image(image, fill_color);
-	}
-	else if (num_args >= 3 && (buffer = duk_get_buffer_data(ctx, 2, &buffer_size))) {
-		// create an Image from an ArrayBuffer or similar object
-		width = duk_require_int(ctx, 0);
-		height = duk_require_int(ctx, 1);
-		if (buffer_size < width * height * sizeof(color_t))
-			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "buffer is too small to describe a %dx%d image", width, height);
-		if (!(image = create_image(width, height)))
-			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to create image");
-		if (!(lock = lock_image(image))) {
-			free_image(image);
-			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to lock pixels for writing");
-		}
-		p_line = lock->pixels;
-		for (y = 0; y < height; ++y) {
-			memcpy(p_line, buffer + y * width, width * sizeof(color_t));
-			p_line += lock->pitch;
-		}
-		unlock_image(image, lock);
-	}
-	else if (duk_is_sphere_obj(ctx, 0, "Surface")) {
-		// create an Image from a Surface
-		src_image = duk_require_sphere_obj(ctx, 0, "Surface");
-		if (!(image = clone_image(src_image)))
-			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Image(): unable to create image from surface");
-	}
-	else {
-		// create an Image by loading an image file
-		filename = duk_require_path(ctx, 0, NULL, false);
-		image = load_image(filename);
-		if (image == NULL)
-			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Image(): unable to load image file `%s`", filename);
-	}
-	duk_push_sphere_image(ctx, image);
-	free_image(image);
-	return 1;
-}
-
-static duk_ret_t
-js_Image_finalize(duk_context* ctx)
-{
-	image_t* image;
-
-	image = duk_require_sphere_image(ctx, 0);
-	free_image(image);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_get_height(duk_context* ctx)
-{
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	duk_push_int(ctx, get_image_height(image));
-	return 1;
-}
-
-static duk_ret_t
-js_Image_get_width(duk_context* ctx)
-{
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	duk_push_int(ctx, get_image_width(image));
-	return 1;
+	image_free(image);
 }
