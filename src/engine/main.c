@@ -8,10 +8,8 @@
 #include "debugger.h"
 #include "galileo.h"
 #include "input.h"
-#include "map_engine.h"
 #include "rng.h"
 #include "sockets.h"
-#include "spriteset.h"
 
 // enable Windows visual styles (MSVC)
 #ifdef _MSC_VER
@@ -383,8 +381,6 @@ initialize_engine(void)
 	initialize_audio();
 	initialize_input();
 	initialize_sockets();
-	initialize_spritesets();
-	initialize_map_engine();
 	initialize_scripts();
 
 	return true;
@@ -405,7 +401,6 @@ shutdown_engine(void)
 	shutdown_debugger();
 #endif
 
-	shutdown_map_engine();
 	shutdown_input();
 	shutdown_scripts();
 	shutdown_sockets();
@@ -416,7 +411,6 @@ shutdown_engine(void)
 	console_log(1, "shutting down Dyad");
 	dyad_shutdown();
 
-	shutdown_spritesets();
 	shutdown_audio();
 	shutdown_galileo();
 	shutdown_async();

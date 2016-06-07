@@ -15,9 +15,6 @@ const link = require('link');
 var threads =
 module.exports = (function()
 {
-	var _SetRenderScript = SetRenderScript;
-	var _SetUpdateScript = SetUpdateScript;
-	
 	var currentSelf = 0;
 	var hasUpdated = false;
 	var nextThreadID = 1;
@@ -29,12 +26,6 @@ module.exports = (function()
 			a.id - b.id;
 	};
 	
-	_SetUpdateScript(updateAll);
-	_SetRenderScript(renderAll);
-	SetUpdateScript = SetRenderScript = function() {
-		throw new TypeError("API incompatible with miniRT");
-	}
-
 	return {
 		create:    create,
 		createEx:  createEx,
@@ -48,19 +39,9 @@ module.exports = (function()
 
 	function doFrame()
 	{
-		if (IsMapEngineRunning())
-			RenderMap();
-		else
-			renderAll();
+		renderAll();
 		screen.flip();
-		if (IsMapEngineRunning()) {
-			hasUpdated = false;
-			UpdateMapEngine();
-			if (!hasUpdated)
-				updateAll();
-		} else {
-			updateAll();
-		}
+		updateAll();
 	};
 
 	// threads.create()

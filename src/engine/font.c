@@ -11,6 +11,7 @@ static duk_ret_t js_Font_get_Default     (duk_context* ctx);
 static duk_ret_t js_new_Font             (duk_context* ctx);
 static duk_ret_t js_Font_finalize        (duk_context* ctx);
 static duk_ret_t js_Font_get_height      (duk_context* ctx);
+static duk_ret_t js_Font_drawText        (duk_context* ctx);
 static duk_ret_t js_Font_getStringHeight (duk_context* ctx);
 static duk_ret_t js_Font_getStringWidth  (duk_context* ctx);
 static duk_ret_t js_Font_wordWrap        (duk_context* ctx);
@@ -519,6 +520,7 @@ init_font_api(duk_context* ctx)
 	api_register_ctor(ctx, "Font", js_new_Font, js_Font_finalize);
 	api_register_static_prop(ctx, "Font", "Default", js_Font_get_Default, NULL);
 	api_register_prop(ctx, "Font", "height", js_Font_get_height, NULL);
+	api_register_method(ctx, "Font", "drawText", js_Font_drawText);
 	api_register_method(ctx, "Font", "getStringHeight", js_Font_getStringHeight);
 	api_register_method(ctx, "Font", "getStringWidth", js_Font_getStringWidth);
 	api_register_method(ctx, "Font", "wordWrap", js_Font_wordWrap);
@@ -584,6 +586,53 @@ js_Font_get_height(duk_context* ctx)
 	duk_pop(ctx);
 	duk_push_int(ctx, font_height(font));
 	return 1;
+}
+
+static duk_ret_t
+js_Font_drawText(duk_context* ctx)
+{
+	color_t     color;
+	font_t*     font;
+	int         height;
+	int         num_args;
+	image_t*    surface;
+	const char* text;
+	int         width;
+	wraptext_t* wraptext;
+	int         x;
+	int         y;
+
+	int i;
+
+	num_args = duk_get_top(ctx);
+	duk_push_this(ctx);
+	font = duk_require_sphere_obj(ctx, -1, "Font");
+	surface = duk_require_sphere_obj(ctx, 0, "Surface");
+	x = duk_require_int(ctx, 1);
+	y = duk_require_int(ctx, 2);
+	text = duk_to_string(ctx, 3);
+	color = num_args >= 5 ? duk_require_sphere_color(ctx, 4)
+		: color_new(255, 255, 255, 255);
+	width = num_args >= 6 ? duk_require_int(ctx, 5) : 0;
+
+	if (surface == NULL && screen_is_skipframe(g_screen))
+		return 0;
+	else {
+		if (surface != NULL)
+			al_set_target_bitmap(get_image_bitmap(surface));
+		if (num_args < 6)
+			font_draw_text(font, color, x, y, TEXT_ALIGN_LEFT, text);
+		else {
+			wraptext = wraptext_new(text, font, width);
+			height = font_height(font);
+			for (i = 0; i < wraptext_len(wraptext); ++i)
+				font_draw_text(font, color, x, y + i * height, TEXT_ALIGN_LEFT, wraptext_line(wraptext, i));
+			wraptext_free(wraptext);
+		}
+		if (surface != NULL)
+			al_set_target_backbuffer(screen_display(g_screen));
+	}
+	return 0;
 }
 
 static duk_ret_t

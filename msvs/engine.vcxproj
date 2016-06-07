@@ -388,20 +388,14 @@ xcopy /y /d /e /f "..\docs\*-api.txt" "$(OutDir)documentation\"</Command>
     <ClCompile Include="..\src\engine\geometry.c" />
     <ClCompile Include="..\src\engine\image.c" />
     <ClCompile Include="..\src\engine\input.c" />
-    <ClCompile Include="..\src\engine\map_engine.c" />
-    <ClCompile Include="..\src\engine\obsmap.c" />
-    <ClCompile Include="..\src\engine\persons.c" />
     <ClCompile Include="..\src\engine\rng.c" />
     <ClCompile Include="..\src\engine\script.c" />
     <ClCompile Include="..\src\engine\shader.c" />
     <ClCompile Include="..\src\engine\sockets.c" />
     <ClCompile Include="..\src\engine\spherefs.c" />
     <ClCompile Include="..\src\engine\spk.c" />
-    <ClCompile Include="..\src\engine\spriteset.c" />
     <ClCompile Include="..\src\engine\surface.c" />
-    <ClCompile Include="..\src\engine\tileset.c" />
     <ClCompile Include="..\src\engine\utility.c" />
-    <ClCompile Include="..\src\engine\windowstyle.c" />
     <ClCompile Include="..\src\shared\xoroshiro.c" />
   </ItemGroup>
   <ItemGroup>
@@ -431,21 +425,15 @@ xcopy /y /d /e /f "..\docs\*-api.txt" "$(OutDir)documentation\"</Command>
     <ClInclude Include="..\src\engine\geometry.h" />
     <ClInclude Include="..\src\engine\image.h" />
     <ClInclude Include="..\src\engine\input.h" />
-    <ClInclude Include="..\src\engine\map_engine.h" />
     <ClInclude Include="..\src\engine\galileo.h" />
-    <ClInclude Include="..\src\engine\obsmap.h" />
-    <ClInclude Include="..\src\engine\persons.h" />
     <ClInclude Include="..\src\engine\rng.h" />
     <ClInclude Include="..\src\engine\script.h" />
     <ClInclude Include="..\src\engine\shader.h" />
     <ClInclude Include="..\src\engine\sockets.h" />
     <ClInclude Include="..\src\engine\spherefs.h" />
     <ClInclude Include="..\src\engine\spk.h" />
-    <ClInclude Include="..\src\engine\spriteset.h" />
     <ClInclude Include="..\src\engine\surface.h" />
-    <ClInclude Include="..\src\engine\tileset.h" />
     <ClInclude Include="..\src\engine\utility.h" />
-    <ClInclude Include="..\src\engine\windowstyle.h" />
     <ClInclude Include="..\src\shared\xoroshiro.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>

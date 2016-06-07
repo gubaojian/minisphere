@@ -19,23 +19,10 @@ struct image
 	image_t*        parent;
 };
 
-static duk_ret_t js_GrabImage               (duk_context* ctx);
-static duk_ret_t js_new_Image               (duk_context* ctx);
-static duk_ret_t js_Image_finalize          (duk_context* ctx);
-static duk_ret_t js_Image_get_height        (duk_context* ctx);
-static duk_ret_t js_Image_get_width         (duk_context* ctx);
-static duk_ret_t js_Image_blit              (duk_context* ctx);
-static duk_ret_t js_Image_blitMask          (duk_context* ctx);
-static duk_ret_t js_Image_createSurface     (duk_context* ctx);
-static duk_ret_t js_Image_rotateBlit        (duk_context* ctx);
-static duk_ret_t js_Image_rotateBlitMask    (duk_context* ctx);
-static duk_ret_t js_Image_transformBlit     (duk_context* ctx);
-static duk_ret_t js_Image_transformBlitMask (duk_context* ctx);
-static duk_ret_t js_Image_zoomBlit          (duk_context* ctx);
-static duk_ret_t js_Image_zoomBlitMask      (duk_context* ctx);
-
-static void cache_pixels   (image_t* image);
-static void uncache_pixels (image_t* image);
+static duk_ret_t js_new_Image        (duk_context* ctx);
+static duk_ret_t js_Image_finalize   (duk_context* ctx);
+static duk_ret_t js_Image_get_height (duk_context* ctx);
+static duk_ret_t js_Image_get_width  (duk_context* ctx);
 
 static unsigned int s_next_image_id = 0;
 
@@ -232,7 +219,6 @@ free_image(image_t* image)
 	
 	console_log(3, "disposing image #%u no longer in use",
 		image->id);
-	uncache_pixels(image);
 	al_destroy_bitmap(image->bitmap);
 	free_image(image->parent);
 	free(image);
@@ -241,7 +227,6 @@ free_image(image_t* image)
 ALLEGRO_BITMAP*
 get_image_bitmap(image_t* image)
 {
-	uncache_pixels(image);
 	return image->bitmap;
 }
 
@@ -251,57 +236,10 @@ get_image_height(const image_t* image)
 	return image->height;
 }
 
-color_t
-get_image_pixel(image_t* image, int x, int y)
-{
-	if (image->pixel_cache == NULL) {
-		console_log(4, "get_image_pixel() cache miss for image #%u", image->id);
-		cache_pixels(image);
-	}
-	else
-		++image->cache_hits;
-	return image->pixel_cache[x + y * image->width];
-}
-
 int
 get_image_width(const image_t* image)
 {
 	return image->width;
-}
-
-void
-set_image_pixel(image_t* image, int x, int y, color_t color)
-{
-	ALLEGRO_BITMAP* old_target;
-
-	uncache_pixels(image);
-	old_target = al_get_target_bitmap();
-	al_set_target_bitmap(image->bitmap);
-	al_draw_pixel(x + 0.5, y + 0.5, nativecolor(color));
-	al_set_target_bitmap(old_target);
-}
-
-bool
-apply_image_lookup(image_t* image, int x, int y, int width, int height, uint8_t red_lu[256], uint8_t green_lu[256], uint8_t blue_lu[256], uint8_t alpha_lu[256])
-{
-	ALLEGRO_BITMAP*        bitmap = get_image_bitmap(image);
-	uint8_t*               pixel;
-	ALLEGRO_LOCKED_REGION* lock;
-
-	int i_x, i_y;
-
-	if ((lock = al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ABGR_8888, ALLEGRO_LOCK_READWRITE)) == NULL)
-		return false;
-	uncache_pixels(image);
-	for (i_x = x; i_x < x + width; ++i_x) for (i_y = y; i_y < y + height; ++i_y) {
-		pixel = (uint8_t*)lock->data + i_x * 4 + i_y * lock->pitch;
-		pixel[0] = red_lu[pixel[0]];
-		pixel[1] = green_lu[pixel[1]];
-		pixel[2] = blue_lu[pixel[2]];
-		pixel[3] = alpha_lu[pixel[3]];
-	}
-	al_unlock_bitmap(bitmap);
-	return true;
 }
 
 void
@@ -395,7 +333,6 @@ fill_image(image_t* image, color_t color)
 	int             clip_x, clip_y, clip_w, clip_h;
 	ALLEGRO_BITMAP* last_target;
 
-	uncache_pixels(image);
 	al_get_clipping_rectangle(&clip_x, &clip_y, &clip_w, &clip_h);
 	al_reset_clipping_rectangle();
 	last_target = al_get_target_bitmap();
@@ -403,28 +340,6 @@ fill_image(image_t* image, color_t color)
 	al_clear_to_color(al_map_rgba(color.r, color.g, color.b, color.alpha));
 	al_set_target_bitmap(last_target);
 	al_set_clipping_rectangle(clip_x, clip_y, clip_w, clip_h);
-}
-
-bool
-flip_image(image_t* image, bool is_h_flip, bool is_v_flip)
-{
-	int             draw_flags = 0x0;
-	ALLEGRO_BITMAP* new_bitmap;
-	ALLEGRO_BITMAP* old_target;
-
-	if (!is_h_flip && !is_v_flip)  // this really shouldn't happen...
-		return true;
-	uncache_pixels(image);
-	if (!(new_bitmap = al_create_bitmap(image->width, image->height))) return false;
-	old_target = al_get_target_bitmap();
-	al_set_target_bitmap(new_bitmap);
-	if (is_h_flip) draw_flags |= ALLEGRO_FLIP_HORIZONTAL;
-	if (is_v_flip) draw_flags |= ALLEGRO_FLIP_VERTICAL;
-	al_draw_bitmap(image->bitmap, 0, 0, draw_flags);
-	al_set_target_bitmap(old_target);
-	al_destroy_bitmap(image->bitmap);
-	image->bitmap = new_bitmap;
-	return true;
 }
 
 image_lock_t*
@@ -445,38 +360,6 @@ lock_image(image_t* image)
 }
 
 bool
-replace_image_color(image_t* image, color_t color, color_t new_color)
-{
-	ALLEGRO_BITMAP*        bitmap = get_image_bitmap(image);
-	uint8_t*               pixel;
-	ALLEGRO_LOCKED_REGION* lock;
-	int                    w, h;
-
-	int i_x, i_y;
-
-	if ((lock = al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ABGR_8888, ALLEGRO_LOCK_READWRITE)) == NULL)
-		return false;
-	uncache_pixels(image);
-	w = al_get_bitmap_width(bitmap);
-	h = al_get_bitmap_height(bitmap);
-	for (i_x = 0; i_x < w; ++i_x) for (i_y = 0; i_y < h; ++i_y) {
-		pixel = (uint8_t*)lock->data + i_x * 4 + i_y * lock->pitch;
-		if (pixel[0] == color.r &&
-		    pixel[1] == color.g &&
-		    pixel[2] == color.b &&
-		    pixel[3] == color.alpha)
-		{
-			pixel[0] = new_color.r;
-			pixel[1] = new_color.g;
-			pixel[2] = new_color.b;
-			pixel[3] = new_color.alpha;
-		}
-	}
-	al_unlock_bitmap(bitmap);
-	return true;
-}
-
-bool
 rescale_image(image_t* image, int width, int height)
 {
 	ALLEGRO_BITMAP* new_bitmap;
@@ -486,7 +369,6 @@ rescale_image(image_t* image, int width, int height)
 		return true;
 	if (!(new_bitmap = al_create_bitmap(width, height)))
 		return false;
-	uncache_pixels(image);
 	old_target = al_get_target_bitmap();
 	al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO);
 	al_set_target_bitmap(new_bitmap);
@@ -498,31 +380,6 @@ rescale_image(image_t* image, int width, int height)
 	image->width = al_get_bitmap_width(image->bitmap);
 	image->height = al_get_bitmap_height(image->bitmap);
 	return true;
-}
-
-bool
-save_image(image_t* image, const char* filename)
-{
-	void*         buffer = NULL;
-	size_t        file_size;
-	bool          is_eof;
-	ALLEGRO_FILE* memfile;
-	size_t        next_buf_size;
-	bool          result;
-
-	next_buf_size = 65536;
-	do {
-		buffer = realloc(buffer, next_buf_size);
-		memfile = al_open_memfile(buffer, next_buf_size, "wb");
-		next_buf_size *= 2;
-		al_save_bitmap_f(memfile, strrchr(filename, '.'), image->bitmap);
-		file_size = al_ftell(memfile);
-		is_eof = al_feof(memfile);
-		al_fclose(memfile);
-	} while (is_eof);
-	result = sfs_fspew(g_fs, filename, NULL, buffer, file_size);
-	free(buffer);
-	return result;
 }
 
 void
@@ -538,63 +395,12 @@ unlock_image(image_t* image, image_lock_t* lock)
 	free_image(image);
 }
 
-static void
-cache_pixels(image_t* image)
-{
-	color_t*      cache;
-	image_lock_t* lock;
-	void          *psrc, *pdest;
-
-	int i;
-
-	free(image->pixel_cache); image->pixel_cache = NULL;
-	if (!(lock = lock_image(image)))
-		goto on_error;
-	if (!(cache = malloc(image->width * image->height * 4)))
-		goto on_error;
-	console_log(4, "creating new pixel cache for image #%u", image->id);
-	for (i = 0; i < image->height; ++i) {
-		psrc = lock->pixels + i * lock->pitch;
-		pdest = cache + i * image->width;
-		memcpy(pdest, psrc, image->width * 4);
-	}
-	unlock_image(image, lock);
-	image->pixel_cache = cache;
-	image->cache_hits = 0;
-	return;
-	
-on_error:
-	if (lock != NULL)
-		al_unlock_bitmap(image->bitmap);
-}
-
-static void
-uncache_pixels(image_t* image)
-{
-	if (image->pixel_cache == NULL)
-		return;
-	console_log(4, "pixel cache invalidated for image #%u, hits: %u", image->id, image->cache_hits);
-	free(image->pixel_cache);
-	image->pixel_cache = NULL;
-}
-
 void
 init_image_api(duk_context* ctx)
 {
-	api_register_method(ctx, NULL, "GrabImage", js_GrabImage);
-
 	api_register_ctor(ctx, "Image", js_new_Image, js_Image_finalize);
 	api_register_prop(ctx, "Image", "height", js_Image_get_height, NULL);
 	api_register_prop(ctx, "Image", "width", js_Image_get_width, NULL);
-	api_register_method(ctx, "Image", "blit", js_Image_blit);
-	api_register_method(ctx, "Image", "blitMask", js_Image_blitMask);
-	api_register_method(ctx, "Image", "createSurface", js_Image_createSurface);
-	api_register_method(ctx, "Image", "rotateBlit", js_Image_rotateBlit);
-	api_register_method(ctx, "Image", "rotateBlitMask", js_Image_rotateBlitMask);
-	api_register_method(ctx, "Image", "transformBlit", js_Image_transformBlit);
-	api_register_method(ctx, "Image", "transformBlitMask", js_Image_transformBlitMask);
-	api_register_method(ctx, "Image", "zoomBlit", js_Image_zoomBlit);
-	api_register_method(ctx, "Image", "zoomBlitMask", js_Image_zoomBlitMask);
 }
 
 void
@@ -607,23 +413,6 @@ image_t*
 duk_require_sphere_image(duk_context* ctx, duk_idx_t index)
 {
 	return duk_require_sphere_obj(ctx, index, "Image");
-}
-
-static duk_ret_t
-js_GrabImage(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	int w = duk_require_int(ctx, 2);
-	int h = duk_require_int(ctx, 3);
-
-	image_t* image;
-
-	if (!(image = screen_grab(g_screen, x, y, w, h)))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "GrabImage(): unable to grab backbuffer image");
-	duk_push_sphere_image(ctx, image);
-	free_image(image);
-	return 1;
 }
 
 static duk_ret_t
@@ -722,186 +511,4 @@ js_Image_get_width(duk_context* ctx)
 	duk_pop(ctx);
 	duk_push_int(ctx, get_image_width(image));
 	return 1;
-}
-
-static duk_ret_t
-js_Image_blit(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	
-	image_t* image;
-	
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen)) al_draw_bitmap(get_image_bitmap(image), x, y, 0x0);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_blitMask(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	color_t mask = duk_require_sphere_color(ctx, 2);
-
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen)) al_draw_tinted_bitmap(get_image_bitmap(image), al_map_rgba(mask.r, mask.g, mask.b, mask.alpha), x, y, 0x0);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_createSurface(duk_context* ctx)
-{
-	image_t* image;
-	image_t* new_image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	if ((new_image = clone_image(image)) == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Image:createSurface(): unable to create new surface image");
-	duk_push_sphere_obj(ctx, "Surface", new_image);
-	return 1;
-}
-
-static duk_ret_t
-js_Image_rotateBlit(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	float angle = duk_require_number(ctx, 2);
-
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen))
-		al_draw_rotated_bitmap(get_image_bitmap(image),
-			image->width / 2, image->height / 2, x + image->width / 2, y + image->height / 2,
-			angle, 0x0);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_rotateBlitMask(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	float angle = duk_require_number(ctx, 2);
-	color_t mask = duk_require_sphere_color(ctx, 3);
-
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen))
-		al_draw_tinted_rotated_bitmap(get_image_bitmap(image), al_map_rgba(mask.r, mask.g, mask.b, mask.alpha),
-			image->width / 2, image->height / 2, x + image->width / 2, y + image->height / 2,
-			angle, 0x0);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_transformBlit(duk_context* ctx)
-{
-	int x1 = duk_require_int(ctx, 0);
-	int y1 = duk_require_int(ctx, 1);
-	int x2 = duk_require_int(ctx, 2);
-	int y2 = duk_require_int(ctx, 3);
-	int x3 = duk_require_int(ctx, 4);
-	int y3 = duk_require_int(ctx, 5);
-	int x4 = duk_require_int(ctx, 6);
-	int y4 = duk_require_int(ctx, 7);
-
-	image_t*      image;
-	ALLEGRO_COLOR vertex_color;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	vertex_color = al_map_rgba(255, 255, 255, 255);
-	ALLEGRO_VERTEX v[] = {
-		{ x1 + 0.5, y1 + 0.5, 0, 0, 0, vertex_color },
-		{ x2 + 0.5, y2 + 0.5, 0, image->width, 0, vertex_color },
-		{ x4 + 0.5, y4 + 0.5, 0, 0, image->height, vertex_color },
-		{ x3 + 0.5, y3 + 0.5, 0, image->width, image->height, vertex_color }
-	};
-	if (!screen_is_skipframe(g_screen))
-		al_draw_prim(v, NULL, get_image_bitmap(image), 0, 4, ALLEGRO_PRIM_TRIANGLE_STRIP);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_transformBlitMask(duk_context* ctx)
-{
-	int x1 = duk_require_int(ctx, 0);
-	int y1 = duk_require_int(ctx, 1);
-	int x2 = duk_require_int(ctx, 2);
-	int y2 = duk_require_int(ctx, 3);
-	int x3 = duk_require_int(ctx, 4);
-	int y3 = duk_require_int(ctx, 5);
-	int x4 = duk_require_int(ctx, 6);
-	int y4 = duk_require_int(ctx, 7);
-	color_t mask = duk_require_sphere_color(ctx, 8);
-
-	ALLEGRO_COLOR vtx_color;
-	image_t*      image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	vtx_color = al_map_rgba(mask.r, mask.g, mask.b, mask.alpha);
-	ALLEGRO_VERTEX v[] = {
-		{ x1 + 0.5, y1 + 0.5, 0, 0, 0, vtx_color },
-		{ x2 + 0.5, y2 + 0.5, 0, image->width, 0, vtx_color },
-		{ x4 + 0.5, y4 + 0.5, 0, 0, image->height, vtx_color },
-		{ x3 + 0.5, y3 + 0.5, 0, image->width, image->height, vtx_color }
-	};
-	if (!screen_is_skipframe(g_screen))
-		al_draw_prim(v, NULL, get_image_bitmap(image), 0, 4, ALLEGRO_PRIM_TRIANGLE_STRIP);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_zoomBlit(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	float scale = duk_require_number(ctx, 2);
-	
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen))
-		al_draw_scaled_bitmap(get_image_bitmap(image), 0, 0, image->width, image->height, x, y, image->width * scale, image->height * scale, 0x0);
-	return 0;
-}
-
-static duk_ret_t
-js_Image_zoomBlitMask(duk_context* ctx)
-{
-	int x = duk_require_int(ctx, 0);
-	int y = duk_require_int(ctx, 1);
-	float scale = duk_require_number(ctx, 2);
-	color_t mask = duk_require_sphere_color(ctx, 3);
-
-	image_t* image;
-
-	duk_push_this(ctx);
-	image = duk_require_sphere_image(ctx, -1);
-	duk_pop(ctx);
-	if (!screen_is_skipframe(g_screen))
-		al_draw_tinted_scaled_bitmap(get_image_bitmap(image), al_map_rgba(mask.r, mask.g, mask.b, mask.alpha),
-			0, 0, image->width, image->height, x, y, image->width * scale, image->height * scale, 0x0);
-	return 0;
 }

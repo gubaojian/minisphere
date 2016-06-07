@@ -3,15 +3,12 @@
 
 #include "api.h"
 
-static duk_ret_t js_DoesFileExist    (duk_context* ctx);
-static duk_ret_t js_GetDirectoryList (duk_context* ctx);
-static duk_ret_t js_GetFileList      (duk_context* ctx);
-static duk_ret_t js_CreateDirectory  (duk_context* ctx);
-static duk_ret_t js_RemoveDirectory  (duk_context* ctx);
-static duk_ret_t js_RemoveFile       (duk_context* ctx);
-static duk_ret_t js_Rename           (duk_context* ctx);
-
-static duk_ret_t js_new_FileStream          (duk_context* ctx);
+static duk_ret_t js_fs_exists               (duk_context* ctx);
+static duk_ret_t js_fs_mkdir                (duk_context* ctx);
+static duk_ret_t js_fs_open                 (duk_context* ctx);
+static duk_ret_t js_fs_rename               (duk_context* ctx);
+static duk_ret_t js_fs_rmdir                (duk_context* ctx);
+static duk_ret_t js_fs_unlink               (duk_context* ctx);
 static duk_ret_t js_FileStream_finalize     (duk_context* ctx);
 static duk_ret_t js_FileStream_get_position (duk_context* ctx);
 static duk_ret_t js_FileStream_set_position (duk_context* ctx);
@@ -352,17 +349,13 @@ write_vsize_uint(sfs_file_t* file, intmax_t value, int size, bool little_endian)
 void
 init_file_api(void)
 {
-	// File API functions
-	api_register_method(g_duk, NULL, "DoesFileExist", js_DoesFileExist);
-	api_register_method(g_duk, NULL, "GetDirectoryList", js_GetDirectoryList);
-	api_register_method(g_duk, NULL, "GetFileList", js_GetFileList);
-	api_register_method(g_duk, NULL, "CreateDirectory", js_CreateDirectory);
-	api_register_method(g_duk, NULL, "RemoveDirectory", js_RemoveDirectory);
-	api_register_method(g_duk, NULL, "RemoveFile", js_RemoveFile);
-	api_register_method(g_duk, NULL, "Rename", js_Rename);
-
-	// FileStream object
-	api_register_ctor(g_duk, "FileStream", js_new_FileStream, js_FileStream_finalize);
+	api_register_static_func(g_duk, "fs", "exists", js_fs_exists);
+	api_register_static_func(g_duk, "fs", "open", js_fs_open);
+	api_register_static_func(g_duk, "fs", "mkdir", js_fs_mkdir);
+	api_register_static_func(g_duk, "fs", "rename", js_fs_rename);
+	api_register_static_func(g_duk, "fs", "rmdir", js_fs_rmdir);
+	api_register_static_func(g_duk, "fs", "unlink", js_fs_unlink);
+	api_register_type(g_duk, "FileStream", js_FileStream_finalize);
 	api_register_prop(g_duk, "FileStream", "length", js_FileStream_get_length, NULL);
 	api_register_prop(g_duk, "FileStream", "position", js_FileStream_get_position, js_FileStream_set_position);
 	api_register_prop(g_duk, "FileStream", "size", js_FileStream_get_length, NULL);
@@ -384,11 +377,11 @@ init_file_api(void)
 }
 
 static duk_ret_t
-js_DoesFileExist(duk_context* ctx)
+js_fs_exists(duk_context* ctx)
 {
 	const char* filename;
 
-	filename = duk_require_path(ctx, 0, NULL, true);
+	filename = duk_require_path(ctx, 0, NULL, false);
 	duk_push_boolean(ctx, sfs_fexist(g_fs, filename, NULL));
 	return 1;
 }
@@ -446,60 +439,19 @@ js_GetFileList(duk_context* ctx)
 }
 
 static duk_ret_t
-js_CreateDirectory(duk_context* ctx)
+js_fs_mkdir(duk_context* ctx)
 {
 	const char* name;
 
-	name = duk_require_path(ctx, 0, "save", true);
+	name = duk_require_path(ctx, 0, NULL, false);
 	if (!sfs_mkdir(g_fs, name, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "CreateDirectory(): unable to create directory `%s`", name);
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to make directory `%s`", name);
 	return 0;
 }
 
 static duk_ret_t
-js_RemoveDirectory(duk_context* ctx)
+js_fs_open(duk_context* ctx)
 {
-	const char* name;
-
-	name = duk_require_path(ctx, 0, "save", true);
-	if (!sfs_rmdir(g_fs, name, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "CreateDirectory(): unable to remove directory `%s`", name);
-	return 0;
-}
-
-static duk_ret_t
-js_RemoveFile(duk_context* ctx)
-{
-	const char* filename;
-	
-	filename = duk_require_path(ctx, 0, "save", true);
-	if (!sfs_unlink(g_fs, filename, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "RemoveFile(): unable to delete file `%s`", filename);
-	return 0;
-}
-
-static duk_ret_t
-js_Rename(duk_context* ctx)
-{
-	const char* name1; 
-	const char* name2;
-
-	name1 = duk_require_path(ctx, 0, "save", true);
-	name2 = duk_require_path(ctx, 1, "save", true);
-	if (!sfs_rename(g_fs, name1, name2, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Rename(): unable to rename file `%s` to `%s`", name1, name2);
-	return 0;
-}
-
-static duk_ret_t
-js_new_FileStream(duk_context* ctx)
-{
-	// new FileStream(filename);
-	// Arguments:
-	//     filename: The SphereFS path of the file to open.
-	//     mode:     A string specifying how to open the file, in the same format as
-	//               would be passed to C fopen().
-
 	sfs_file_t* file;
 	const char* filename;
 	const char* mode;
@@ -508,10 +460,45 @@ js_new_FileStream(duk_context* ctx)
 	mode = duk_require_string(ctx, 1);
 	file = sfs_fopen(g_fs, filename, NULL, mode);
 	if (file == NULL)
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to open file `%s` in mode `%s`",
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to open `%s` in mode `%s`",
 			filename, mode);
 	duk_push_sphere_obj(ctx, "FileStream", file);
 	return 1;
+}
+
+static duk_ret_t
+js_fs_rename(duk_context* ctx)
+{
+	const char* name1;
+	const char* name2;
+
+	name1 = duk_require_path(ctx, 0, NULL, false);
+	name2 = duk_require_path(ctx, 1, NULL, false);
+	if (!sfs_rename(g_fs, name1, name2, NULL))
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to rename `%s` to `%s`", name1, name2);
+	return 0;
+}
+
+static duk_ret_t
+js_fs_rmdir(duk_context* ctx)
+{
+	const char* name;
+
+	name = duk_require_path(ctx, 0, NULL, false);
+	if (!sfs_rmdir(g_fs, name, NULL))
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to remove directory `%s`", name);
+	return 0;
+}
+
+static duk_ret_t
+js_fs_unlink(duk_context* ctx)
+{
+	const char* filename;
+	
+	filename = duk_require_path(ctx, 0, NULL, false);
+	if (!sfs_unlink(g_fs, filename, NULL))
+		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to unlink `%s`", filename);
+	return 0;
 }
 
 static duk_ret_t

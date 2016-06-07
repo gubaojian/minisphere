@@ -12,13 +12,10 @@
 #include "galileo.h"
 #include "image.h"
 #include "input.h"
-#include "map_engine.h"
 #include "rng.h"
 #include "shader.h"
 #include "sockets.h"
-#include "spriteset.h"
 #include "surface.h"
-#include "windowstyle.h"
 
 #define SPHERE_API_VERSION 2
 #define SPHERE_API_LEVEL   1
@@ -40,10 +37,6 @@ static duk_ret_t js_engine_doEvents       (duk_context* ctx);
 static duk_ret_t js_engine_exit           (duk_context* ctx);
 static duk_ret_t js_engine_restart        (duk_context* ctx);
 static duk_ret_t js_engine_sleep          (duk_context* ctx);
-static duk_ret_t js_RequireSystemScript   (duk_context* ctx);
-static duk_ret_t js_RequireScript         (duk_context* ctx);
-static duk_ret_t js_EvaluateSystemScript  (duk_context* ctx);
-static duk_ret_t js_EvaluateScript        (duk_context* ctx);
 static duk_ret_t js_abort                 (duk_context* ctx);
 static duk_ret_t js_alert                 (duk_context* ctx);
 static duk_ret_t js_assert                (duk_context* ctx);
@@ -74,12 +67,6 @@ initialize_api(duk_context* ctx)
 	duk_push_global_object(ctx);
 	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE);
 
-	// set up RequireScript() inclusion tracking table
-	duk_push_global_stash(ctx);
-	duk_push_object(ctx);
-	duk_put_prop_string(ctx, -2, "RequireScript");
-	duk_pop(ctx);
-
 	// stash an object to hold prototypes for built-in objects
 	duk_push_global_stash(ctx);
 	duk_push_object(ctx);
@@ -102,11 +89,6 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(ctx, NULL, "alert", js_alert);
 	api_register_static_func(ctx, NULL, "assert", js_assert);
 
-	api_register_method(ctx, NULL, "EvaluateScript", js_EvaluateScript);
-	api_register_method(ctx, NULL, "EvaluateSystemScript", js_EvaluateSystemScript);
-	api_register_method(ctx, NULL, "RequireScript", js_RequireScript);
-	api_register_method(ctx, NULL, "RequireSystemScript", js_RequireSystemScript);
-
 	// initialize subsystem APIs
 	init_audio_api();
 	init_color_api();
@@ -117,14 +99,11 @@ initialize_api(duk_context* ctx)
 	init_galileo_api();
 	init_image_api(g_duk);
 	init_input_api();
-	init_map_engine_api(g_duk);
 	init_rng_api();
 	init_screen_api();
 	init_shader_api();
 	init_sockets_api();
-	init_spriteset_api(g_duk);
 	init_surface_api();
-	init_windowstyle_api();
 }
 
 void
@@ -572,89 +551,6 @@ js_engine_sleep(duk_context* ctx)
 	timeout = duk_require_number(ctx, 0);
 
 	delay(timeout);
-	return 0;
-}
-
-static duk_ret_t
-js_EvaluateScript(duk_context* ctx)
-{
-	const char* filename;
-
-	filename = duk_require_path(ctx, 0, "scripts", true);
-	if (!sfs_fexist(g_fs, filename, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "EvaluateScript(): file `%s` not found", filename);
-	if (!evaluate_script(filename, false))
-		duk_throw(ctx);
-	return 1;
-}
-
-static duk_ret_t
-js_EvaluateSystemScript(duk_context* ctx)
-{
-	const char* filename = duk_require_string(ctx, 0);
-
-	char path[SPHERE_PATH_MAX];
-
-	sprintf(path, "scripts/lib/%s", filename);
-	if (!sfs_fexist(g_fs, path, NULL))
-		sprintf(path, "#/scripts/%s", filename);
-	if (!sfs_fexist(g_fs, path, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "EvaluateSystemScript(): system script `%s` not found", filename);
-	if (!evaluate_script(path, false))
-		duk_throw(ctx);
-	return 1;
-}
-
-static duk_ret_t
-js_RequireScript(duk_context* ctx)
-{
-	const char* filename;
-	bool        is_required;
-
-	filename = duk_require_path(ctx, 0, "scripts", true);
-	if (!sfs_fexist(g_fs, filename, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "RequireScript(): file `%s` not found", filename);
-	duk_push_global_stash(ctx);
-	duk_get_prop_string(ctx, -1, "RequireScript");
-	duk_get_prop_string(ctx, -1, filename);
-	is_required = duk_get_boolean(ctx, -1);
-	duk_pop(ctx);
-	if (!is_required) {
-		duk_push_true(ctx);
-		duk_put_prop_string(ctx, -2, filename);
-		if (!evaluate_script(filename, false))
-			duk_throw(ctx);
-	}
-	duk_pop_3(ctx);
-	return 0;
-}
-
-static duk_ret_t
-js_RequireSystemScript(duk_context* ctx)
-{
-	const char* filename = duk_require_string(ctx, 0);
-
-	bool is_required;
-	char path[SPHERE_PATH_MAX];
-
-	sprintf(path, "scripts/lib/%s", filename);
-	if (!sfs_fexist(g_fs, path, NULL))
-		sprintf(path, "#/scripts/%s", filename);
-	if (!sfs_fexist(g_fs, path, NULL))
-		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "RequireSystemScript(): system script `%s` not found", filename);
-
-	duk_push_global_stash(ctx);
-	duk_get_prop_string(ctx, -1, "RequireScript");
-	duk_get_prop_string(ctx, -1, path);
-	is_required = duk_get_boolean(ctx, -1);
-	duk_pop(ctx);
-	if (!is_required) {
-		duk_push_true(ctx);
-		duk_put_prop_string(ctx, -2, path);
-		if (!evaluate_script(path, false))
-			duk_throw(ctx);
-	}
-	duk_pop_2(ctx);
 	return 0;
 }
 
