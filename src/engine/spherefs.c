@@ -223,6 +223,8 @@ make_sfs_path(const char* filename)
 	path = path_new(filename);
 	if (path_is_rooted(path))  // absolute path?
 		return path;
+	if (path_num_hops(path) == 0)
+		return path;
 
 	if (path_hop_cmp(path, 0, "@")) {
 		path_remove_hop(path, 0);

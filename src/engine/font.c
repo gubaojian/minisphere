@@ -2,7 +2,6 @@
 #include "font.h"
 
 #include "api.h"
-#include "atlas.h"
 #include "color.h"
 #include "image.h"
 #include "unicode.h"

@@ -42,9 +42,6 @@
     <ClCompile Include="..\src\engine\async.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\engine\atlas.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\engine\color.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -141,9 +138,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\engine\async.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\engine\atlas.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\engine\color.h">

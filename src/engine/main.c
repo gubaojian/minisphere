@@ -58,6 +58,7 @@ static const char* const ERROR_TEXT[][2] =
 	{ "you better run, and you better hide...", "...'cause a big fat hawk just ate that guy!" },
 	{ "an exception was thrown.", "minisphere takes exception to sucky games." },
 	{ "honk. HONK. honk. HONK. :o)", "there's a clown behind you." },
+	{ "hey, where'd that pegasus come from?", "oh well, it's going to get eaten anyway." },
 };
 
 int

@@ -36,16 +36,6 @@ homepath(void)
 	return retval;
 }
 
-const char*
-systempath(const char* filename)
-{
-	static char retval[SPHERE_PATH_MAX];
-
-	retval[SPHERE_PATH_MAX - 1] = '\0';
-	snprintf(retval, SPHERE_PATH_MAX - 1, "#/%s", filename);
-	return retval;
-}
-
 bool
 is_cpu_little_endian(void)
 {

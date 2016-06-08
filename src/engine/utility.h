@@ -3,7 +3,6 @@
 
 const path_t* enginepath (void);
 const path_t* homepath   (void);
-const char*   systempath (const char* filename);
 
 bool        is_cpu_little_endian  (void);
 duk_int_t   duk_json_pdecode      (duk_context* ctx);
