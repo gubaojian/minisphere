@@ -187,22 +187,73 @@ font_free(font_t* font)
 	free(font);
 }
 
-image_t*
-font_glyph_image(const font_t* font, int codepoint)
-{
-	return font->glyphs[codepoint].image;
-}
-
-int
-font_glyph_width(const font_t* font, int codepoint)
-{
-	return font->glyphs[codepoint].width;
-}
-
 int
 font_height(const font_t* font)
 {
 	return font->height;
+}
+
+void
+font_draw_text(const font_t* font, color_t color, int x, int y, text_align_t alignment, const char* text)
+{
+	uint8_t  ch_byte;
+	uint32_t cp;
+	int      tab_width;
+	uint32_t utf8state;
+
+	if (alignment == TEXT_ALIGN_CENTER)
+		x -= font_get_width(font, text) / 2;
+	else if (alignment == TEXT_ALIGN_RIGHT)
+		x -= font_get_width(font, text);
+
+	tab_width = font->glyphs[' '].width * 3;
+	al_hold_bitmap_drawing(true);
+	for (;;) {
+		utf8state = UTF8_ACCEPT;
+		while (utf8decode(&utf8state, &cp, ch_byte = *text++) > UTF8_REJECT);
+		if (utf8state == UTF8_REJECT && ch_byte == '\0')
+			--text;  // don't eat NUL terminator
+		cp = cp == 0x20AC ? 128
+			: cp == 0x201A ? 130
+			: cp == 0x0192 ? 131
+			: cp == 0x201E ? 132
+			: cp == 0x2026 ? 133
+			: cp == 0x2020 ? 134
+			: cp == 0x2021 ? 135
+			: cp == 0x02C6 ? 136
+			: cp == 0x2030 ? 137
+			: cp == 0x0160 ? 138
+			: cp == 0x2039 ? 139
+			: cp == 0x0152 ? 140
+			: cp == 0x017D ? 142
+			: cp == 0x2018 ? 145
+			: cp == 0x2019 ? 146
+			: cp == 0x201C ? 147
+			: cp == 0x201D ? 148
+			: cp == 0x2022 ? 149
+			: cp == 0x2013 ? 150
+			: cp == 0x2014 ? 151
+			: cp == 0x02DC ? 152
+			: cp == 0x2122 ? 153
+			: cp == 0x0161 ? 154
+			: cp == 0x203A ? 155
+			: cp == 0x0153 ? 156
+			: cp == 0x017E ? 158
+			: cp == 0x0178 ? 159
+			: cp;
+		cp = utf8state == UTF8_ACCEPT
+			? cp < (uint32_t)font->num_glyphs ? cp : 0x1A
+			: 0x1A;
+		if (cp == '\0')
+			break;
+		else if (cp == '\t')
+			x += tab_width;
+		else {
+			image_draw_masked(font->glyphs[cp].image, color, x, y);
+			x += font->glyphs[cp].width;
+		}
+	}
+	al_hold_bitmap_drawing(false);
 }
 
 void
@@ -263,69 +314,6 @@ font_get_width(const font_t* font, const char* text)
 	return width;
 }
 
-void
-font_draw_text(const font_t* font, color_t color, int x, int y, text_align_t alignment, const char* text)
-{
-	uint8_t  ch_byte;
-	uint32_t cp;
-	int      tab_width;
-	uint32_t utf8state;
-	
-	if (alignment == TEXT_ALIGN_CENTER)
-		x -= font_get_width(font, text) / 2;
-	else if (alignment == TEXT_ALIGN_RIGHT)
-		x -= font_get_width(font, text);
-	
-	tab_width = font->glyphs[' '].width * 3;
-	al_hold_bitmap_drawing(true);
-	for (;;) {
-		utf8state = UTF8_ACCEPT;
-		while (utf8decode(&utf8state, &cp, ch_byte = *text++) > UTF8_REJECT);
-		if (utf8state == UTF8_REJECT && ch_byte == '\0')
-			--text;  // don't eat NUL terminator
-		cp = cp == 0x20AC ? 128
-			: cp == 0x201A ? 130
-			: cp == 0x0192 ? 131
-			: cp == 0x201E ? 132
-			: cp == 0x2026 ? 133
-			: cp == 0x2020 ? 134
-			: cp == 0x2021 ? 135
-			: cp == 0x02C6 ? 136
-			: cp == 0x2030 ? 137
-			: cp == 0x0160 ? 138
-			: cp == 0x2039 ? 139
-			: cp == 0x0152 ? 140
-			: cp == 0x017D ? 142
-			: cp == 0x2018 ? 145
-			: cp == 0x2019 ? 146
-			: cp == 0x201C ? 147
-			: cp == 0x201D ? 148
-			: cp == 0x2022 ? 149
-			: cp == 0x2013 ? 150
-			: cp == 0x2014 ? 151
-			: cp == 0x02DC ? 152
-			: cp == 0x2122 ? 153
-			: cp == 0x0161 ? 154
-			: cp == 0x203A ? 155
-			: cp == 0x0153 ? 156
-			: cp == 0x017E ? 158
-			: cp == 0x0178 ? 159
-			: cp;
-		cp = utf8state == UTF8_ACCEPT
-			? cp < (uint32_t)font->num_glyphs ? cp : 0x1A
-			: 0x1A;
-		if (cp == '\0')
-			break;
-		else if (cp == '\t')
-			x += tab_width;
-		else {
-			image_draw_masked(font->glyphs[cp].image, color, x, y);
-			x += font->glyphs[cp].width;
-		}
-	}
-	al_hold_bitmap_drawing(false);
-}
-
 wraptext_t*
 wraptext_new(const char* text, const font_t* font, int width)
 {
@@ -355,8 +343,9 @@ wraptext_new(const char* text, const font_t* font, int width)
 	// allocate initial buffer
 	font_get_metrics(font, &glyph_width, NULL, NULL);
 	pitch = 4 * (glyph_width > 0 ? width / glyph_width : width) + 3;
-	if (!(buffer = malloc(max_lines * pitch))) goto on_error;
-	if (!(carry = malloc(pitch))) goto on_error;
+	if (!(buffer = malloc(max_lines * pitch)))
+		goto on_error;
+	carry = malloc(pitch);
 
 	// run through one character at a time, carrying as necessary
 	line_buffer = buffer; line_buffer[0] = '\0';
@@ -416,7 +405,7 @@ wraptext_new(const char* text, const font_t* font, int width)
 		default:  // default case, copy character as-is
 			memcpy(line_buffer + line_length, start, ch_size);
 			line_length += ch_size;
-			line_width += font_glyph_width(font, cp);
+			line_width += font->glyphs[cp].width;
 			is_line_end = false;
 		}
 		if (is_line_end) carry[0] = '\0';
@@ -471,16 +460,16 @@ wraptext_free(wraptext_t* wraptext)
 	free(wraptext);
 }
 
-const char*
-wraptext_line(const wraptext_t* wraptext, int line_index)
-{
-	return wraptext->buffer + line_index * wraptext->pitch;
-}
-
 int
 wraptext_len(const wraptext_t* wraptext)
 {
 	return wraptext->num_lines;
+}
+
+const char*
+wraptext_line(const wraptext_t* wraptext, int line_index)
+{
+	return wraptext->buffer + line_index * wraptext->pitch;
 }
 
 static void

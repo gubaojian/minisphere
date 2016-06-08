@@ -313,6 +313,15 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(g_duk, "screen", "flip", js_screen_flip);
 	api_register_static_func(g_duk, "screen", "resize", js_screen_resize);
 
+	api_register_const(g_duk, "ShapeType", "Auto", SHAPE_AUTO);
+	api_register_const(g_duk, "ShapeType", "Fan", SHAPE_FAN);
+	api_register_const(g_duk, "ShapeType", "Lines", SHAPE_LINES);
+	api_register_const(g_duk, "ShapeType", "LineLoop", SHAPE_LINE_LOOP);
+	api_register_const(g_duk, "ShapeType", "LineStrip", SHAPE_LINE_STRIP);
+	api_register_const(g_duk, "ShapeType", "Points", SHAPE_POINTS);
+	api_register_const(g_duk, "ShapeType", "Triangles", SHAPE_TRIANGLES);
+	api_register_const(g_duk, "ShapeType", "TriStrip", SHAPE_TRI_STRIP);
+
 	// initialize subsystem APIs
 	init_color_api();
 	init_commonjs_api();
@@ -346,12 +355,32 @@ api_version(void)
 }
 
 void
-api_register_const(duk_context* ctx, const char* name, double value)
+api_register_const(duk_context* ctx, const char* enum_name, const char* name, double value)
 {
 	duk_push_global_object(ctx);
-	duk_push_string(ctx, name); duk_push_number(ctx, value);
+
+	// ensure the namespace object exists
+	if (enum_name != NULL) {
+		if (!duk_get_prop_string(ctx, -1, enum_name)) {
+			duk_pop(ctx);
+			duk_push_string(ctx, enum_name);
+			duk_push_object(ctx);
+			duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
+				| DUK_DEFPROP_CLEAR_ENUMERABLE
+				| DUK_DEFPROP_SET_WRITABLE
+				| DUK_DEFPROP_SET_CONFIGURABLE);
+			duk_get_prop_string(ctx, -1, enum_name);
+		}
+	}
+
+	duk_push_string(ctx, name);
+	duk_push_number(ctx, value);
 	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
+		| DUK_DEFPROP_CLEAR_ENUMERABLE
+		| DUK_DEFPROP_CLEAR_WRITABLE
 		| DUK_DEFPROP_SET_CONFIGURABLE);
+	if (enum_name != NULL)
+		duk_pop(ctx);
 	duk_pop(ctx);
 }
 

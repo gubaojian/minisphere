@@ -37,7 +37,7 @@ function circle(surface, x, y, radius, color, color2)
 		color: color2,
 	});
 	
-	var shape = new Shape(vertices, null, 6);
+	var shape = new Shape(vertices, null, ShapeType.Fan);
 	shape.draw(surface);
 }
 
@@ -48,6 +48,6 @@ function rect(surface, x, y, width, height, color)
 		{ x: x + width, y: y, color: color },
 		{ x: x, y: y + height, color: color },
 		{ x: x + width, y: y + height, color: color },
-	], null, 7);
+	], null, ShapeType.TriStrip);
 	shape.draw(surface);
 }

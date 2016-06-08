@@ -19,11 +19,9 @@ font_t*     font_load        (const char* path);
 font_t*     font_ref         (font_t* font);
 void        font_free        (font_t* font);
 int         font_height      (const font_t* font);
-void        font_get_metrics (const font_t* font, int* min_width, int* max_width, int* out_line_height);
-image_t*    font_glyph_image (const font_t* font, int codepoint);
-int         font_glyph_width (const font_t* font, int codepoint);
-int         font_get_width   (const font_t* font, const char* text);
 void        font_draw_text   (const font_t* font, color_t mask, int x, int y, text_align_t alignment, const char* text);
+void        font_get_metrics (const font_t* font, int* min_width, int* max_width, int* out_line_height);
+int         font_get_width   (const font_t* font, const char* text);
 
 wraptext_t* wraptext_new  (const char* text, const font_t* font, int width);
 void        wraptext_free (wraptext_t* wraptext);

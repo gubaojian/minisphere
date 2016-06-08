@@ -276,7 +276,7 @@ shape_new(shape_type_t type, image_t* texture)
 		: type == SHAPE_LINES ? "line list"
 		: type == SHAPE_LINE_LOOP ? "line loop"
 		: type == SHAPE_TRIANGLES ? "triangle list"
-		: type == SHAPE_TRI_FAN ? "triangle fan"
+		: type == SHAPE_FAN ? "triangle fan"
 		: type == SHAPE_TRI_STRIP ? "triangle strip"
 		: "automatic";
 	console_log(4, "creating shape #%u as %s", s_next_shape_id, type_name);
@@ -499,7 +499,7 @@ render_shape(shape_t* shape)
 			: shape->type == SHAPE_LINE_STRIP ? ALLEGRO_PRIM_LINE_STRIP
 			: shape->type == SHAPE_TRIANGLES ? ALLEGRO_PRIM_TRIANGLE_LIST
 			: shape->type == SHAPE_TRI_STRIP ? ALLEGRO_PRIM_TRIANGLE_STRIP
-			: shape->type == SHAPE_TRI_FAN ? ALLEGRO_PRIM_TRIANGLE_FAN
+			: shape->type == SHAPE_FAN ? ALLEGRO_PRIM_TRIANGLE_FAN
 			: ALLEGRO_PRIM_POINT_LIST;
 
 	bitmap = shape->texture != NULL ? image_bitmap(shape->texture) : NULL;
