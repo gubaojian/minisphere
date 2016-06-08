@@ -28,8 +28,6 @@ int   get_player_key       (int player, player_key_t vkey);
 void  set_player_key       (int player, player_key_t vkey, int keycode);
 void  attach_input_display (void);
 void  clear_key_queue      (void);
-void  load_key_map         (void);
-void  save_key_map         (void);
 void  update_bound_keys    (bool use_map_keys);
 void  update_input         (void);
 

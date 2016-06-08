@@ -3,7 +3,6 @@
 
 #include "api.h"
 #include "debugger.h"
-#include "kevfile.h"
 #include "vector.h"
 
 #define MAX_JOYSTICKS   4
@@ -62,7 +61,6 @@ static void queue_wheel_event (int event);
 static vector_t*            s_bound_buttons;
 static vector_t*            s_bound_keys;
 static vector_t*            s_bound_map_keys;
-static int                  s_default_key_map[4][PLAYER_KEY_MAX];
 static ALLEGRO_EVENT_QUEUE* s_events;
 static bool                 s_have_joystick;
 static bool                 s_have_mouse;
@@ -128,45 +126,42 @@ initialize_input(void)
 
 	// fill in default player key map
 	memset(s_key_map, 0, sizeof(s_key_map));
-	s_default_key_map[0][PLAYER_KEY_UP] = ALLEGRO_KEY_UP;
-	s_default_key_map[0][PLAYER_KEY_DOWN] = ALLEGRO_KEY_DOWN;
-	s_default_key_map[0][PLAYER_KEY_LEFT] = ALLEGRO_KEY_LEFT;
-	s_default_key_map[0][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_RIGHT;
-	s_default_key_map[0][PLAYER_KEY_A] = ALLEGRO_KEY_Z;
-	s_default_key_map[0][PLAYER_KEY_B] = ALLEGRO_KEY_X;
-	s_default_key_map[0][PLAYER_KEY_X] = ALLEGRO_KEY_C;
-	s_default_key_map[0][PLAYER_KEY_Y] = ALLEGRO_KEY_V;
-	s_default_key_map[0][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
-	s_default_key_map[1][PLAYER_KEY_UP] = ALLEGRO_KEY_W;
-	s_default_key_map[1][PLAYER_KEY_DOWN] = ALLEGRO_KEY_S;
-	s_default_key_map[1][PLAYER_KEY_LEFT] = ALLEGRO_KEY_A;
-	s_default_key_map[1][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_D;
-	s_default_key_map[1][PLAYER_KEY_A] = ALLEGRO_KEY_1;
-	s_default_key_map[1][PLAYER_KEY_B] = ALLEGRO_KEY_2;
-	s_default_key_map[1][PLAYER_KEY_X] = ALLEGRO_KEY_3;
-	s_default_key_map[1][PLAYER_KEY_Y] = ALLEGRO_KEY_4;
-	s_default_key_map[1][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
-	s_default_key_map[2][PLAYER_KEY_UP] = ALLEGRO_KEY_PAD_8;
-	s_default_key_map[2][PLAYER_KEY_DOWN] = ALLEGRO_KEY_PAD_2;
-	s_default_key_map[2][PLAYER_KEY_LEFT] = ALLEGRO_KEY_PAD_4;
-	s_default_key_map[2][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_PAD_6;
-	s_default_key_map[2][PLAYER_KEY_A] = ALLEGRO_KEY_PAD_PLUS;
-	s_default_key_map[2][PLAYER_KEY_B] = ALLEGRO_KEY_PAD_MINUS;
-	s_default_key_map[2][PLAYER_KEY_X] = ALLEGRO_KEY_PAD_0;
-	s_default_key_map[2][PLAYER_KEY_Y] = ALLEGRO_KEY_PAD_DELETE;
-	s_default_key_map[2][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
-	s_default_key_map[3][PLAYER_KEY_UP] = ALLEGRO_KEY_I;
-	s_default_key_map[3][PLAYER_KEY_DOWN] = ALLEGRO_KEY_K;
-	s_default_key_map[3][PLAYER_KEY_LEFT] = ALLEGRO_KEY_J;
-	s_default_key_map[3][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_L;
-	s_default_key_map[3][PLAYER_KEY_A] = ALLEGRO_KEY_7;
-	s_default_key_map[3][PLAYER_KEY_B] = ALLEGRO_KEY_8;
-	s_default_key_map[3][PLAYER_KEY_X] = ALLEGRO_KEY_9;
-	s_default_key_map[3][PLAYER_KEY_Y] = ALLEGRO_KEY_0;
-	s_default_key_map[3][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
-
-	// load global key mappings
-	load_key_map();
+	s_key_map[0][PLAYER_KEY_UP] = ALLEGRO_KEY_UP;
+	s_key_map[0][PLAYER_KEY_DOWN] = ALLEGRO_KEY_DOWN;
+	s_key_map[0][PLAYER_KEY_LEFT] = ALLEGRO_KEY_LEFT;
+	s_key_map[0][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_RIGHT;
+	s_key_map[0][PLAYER_KEY_A] = ALLEGRO_KEY_Z;
+	s_key_map[0][PLAYER_KEY_B] = ALLEGRO_KEY_X;
+	s_key_map[0][PLAYER_KEY_X] = ALLEGRO_KEY_C;
+	s_key_map[0][PLAYER_KEY_Y] = ALLEGRO_KEY_V;
+	s_key_map[0][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
+	s_key_map[1][PLAYER_KEY_UP] = ALLEGRO_KEY_W;
+	s_key_map[1][PLAYER_KEY_DOWN] = ALLEGRO_KEY_S;
+	s_key_map[1][PLAYER_KEY_LEFT] = ALLEGRO_KEY_A;
+	s_key_map[1][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_D;
+	s_key_map[1][PLAYER_KEY_A] = ALLEGRO_KEY_1;
+	s_key_map[1][PLAYER_KEY_B] = ALLEGRO_KEY_2;
+	s_key_map[1][PLAYER_KEY_X] = ALLEGRO_KEY_3;
+	s_key_map[1][PLAYER_KEY_Y] = ALLEGRO_KEY_4;
+	s_key_map[1][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
+	s_key_map[2][PLAYER_KEY_UP] = ALLEGRO_KEY_PAD_8;
+	s_key_map[2][PLAYER_KEY_DOWN] = ALLEGRO_KEY_PAD_2;
+	s_key_map[2][PLAYER_KEY_LEFT] = ALLEGRO_KEY_PAD_4;
+	s_key_map[2][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_PAD_6;
+	s_key_map[2][PLAYER_KEY_A] = ALLEGRO_KEY_PAD_PLUS;
+	s_key_map[2][PLAYER_KEY_B] = ALLEGRO_KEY_PAD_MINUS;
+	s_key_map[2][PLAYER_KEY_X] = ALLEGRO_KEY_PAD_0;
+	s_key_map[2][PLAYER_KEY_Y] = ALLEGRO_KEY_PAD_DELETE;
+	s_key_map[2][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
+	s_key_map[3][PLAYER_KEY_UP] = ALLEGRO_KEY_I;
+	s_key_map[3][PLAYER_KEY_DOWN] = ALLEGRO_KEY_K;
+	s_key_map[3][PLAYER_KEY_LEFT] = ALLEGRO_KEY_J;
+	s_key_map[3][PLAYER_KEY_RIGHT] = ALLEGRO_KEY_L;
+	s_key_map[3][PLAYER_KEY_A] = ALLEGRO_KEY_7;
+	s_key_map[3][PLAYER_KEY_B] = ALLEGRO_KEY_8;
+	s_key_map[3][PLAYER_KEY_X] = ALLEGRO_KEY_9;
+	s_key_map[3][PLAYER_KEY_Y] = ALLEGRO_KEY_0;
+	s_key_map[3][PLAYER_KEY_MENU] = ALLEGRO_KEY_TAB;
 }
 
 void
@@ -332,68 +327,6 @@ void
 clear_key_queue(void)
 {
 	s_key_queue.num_keys = 0;
-}
-
-void
-load_key_map(void)
-{
-	kevfile_t*     file;
-	const char* key_name;
-	char*       filename;
-	lstring_t*  setting;
-
-	int i, j;
-
-	filename = g_fs != NULL ? "keymap.kev" : "#/minisphere.conf";
-	if (!(file = kev_open(g_fs, filename, true)))
-		return;
-	for (i = 0; i < 4; ++i) for (j = 0; j < PLAYER_KEY_MAX; ++j) {
-		key_name = j == PLAYER_KEY_UP ? "UP"
-			: j == PLAYER_KEY_DOWN ? "DOWN"
-			: j == PLAYER_KEY_LEFT ? "LEFT"
-			: j == PLAYER_KEY_RIGHT ? "RIGHT"
-			: j == PLAYER_KEY_A ? "A"
-			: j == PLAYER_KEY_B ? "B"
-			: j == PLAYER_KEY_X ? "X"
-			: j == PLAYER_KEY_Y ? "Y"
-			: j == PLAYER_KEY_MENU ? "MENU"
-			: "8:12";
-		setting = lstr_newf("keymap_Player%i_%s", i + 1, key_name);
-		s_key_map[i][j] = kev_read_float(file, lstr_cstr(setting), s_default_key_map[i][j]);
-		lstr_free(setting);
-	}
-	kev_close(file);
-}
-
-void
-save_key_map(void)
-{
-	kevfile_t*     file;
-	const char* key_name;
-	lstring_t*  setting;
-	
-	int i, j;
-
-	if (!s_has_keymap_changed || g_game_path == NULL)
-		return;
-	console_log(1, "saving player key mappings");
-	file = kev_open(g_fs, "keymap.kev", true);
-	for (i = 0; i < 4; ++i) for (j = 0; j < PLAYER_KEY_MAX; ++j) {
-		key_name = j == PLAYER_KEY_UP ? "UP"
-			: j == PLAYER_KEY_DOWN ? "DOWN"
-			: j == PLAYER_KEY_LEFT ? "LEFT"
-			: j == PLAYER_KEY_RIGHT ? "RIGHT"
-			: j == PLAYER_KEY_A ? "A"
-			: j == PLAYER_KEY_B ? "B"
-			: j == PLAYER_KEY_X ? "X"
-			: j == PLAYER_KEY_Y ? "Y"
-			: j == PLAYER_KEY_MENU ? "MENU"
-			: "8:12";
-		setting = lstr_newf("keymap_Player%i_%s", i + 1, key_name);
-		kev_write_float(file, lstr_cstr(setting), s_key_map[i][j]);
-		lstr_free(setting);
-	}
-	kev_close(file);
 }
 
 void

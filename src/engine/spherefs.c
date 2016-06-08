@@ -1,7 +1,6 @@
 #include "minisphere.h"
 #include "spherefs.h"
 
-#include "kevfile.h"
 #include "spk.h"
 
 enum fs_type
@@ -48,7 +47,6 @@ new_sandbox(const char* game_path)
 	int        res_x;
 	int        res_y;
 	size_t     sgm_size;
-	kevfile_t* sgm_file;
 	char*      sgm_text = NULL;
 	spk_t*     spk;
 	void*      sourcemap_data;
@@ -102,7 +100,7 @@ new_sandbox(const char* game_path)
 	// try to load the game manifest if one hasn't been synthesized already
 	if (fs->name == NULL) {
 		if (sgm_text = sfs_fslurp(fs, "game.s2gm", NULL, &sgm_size)) {
-			console_log(1, "parsing Sphere 2 manifest for sandbox #%u", s_next_sandbox_id);
+			console_log(1, "parsing Sphere manifest for sandbox #%u", s_next_sandbox_id);
 			fs->manifest = lstr_from_buf(sgm_text, sgm_size);
 			duk_push_pointer(g_duk, fs);
 			duk_push_lstring_t(g_duk, fs->manifest);
@@ -114,26 +112,6 @@ new_sandbox(const char* game_path)
 			duk_pop(g_duk);
 			free(sgm_text);
 			sgm_text = NULL;
-		}
-		else if (sgm_file = kev_open(fs, "game.sgm", false)) {
-			console_log(1, "parsing legacy manifest for sandbox #%u", s_next_sandbox_id);
-			fs->name = lstr_new(kev_read_string(sgm_file, "name", "Untitled"));
-			fs->author = lstr_new(kev_read_string(sgm_file, "author", "Author Unknown"));
-			fs->summary = lstr_new(kev_read_string(sgm_file, "description", "No information available."));
-			fs->res_x = kev_read_float(sgm_file, "screen_width", 320);
-			fs->res_y = kev_read_float(sgm_file, "screen_height", 240);
-			fs->script_path = make_sfs_path(kev_read_string(sgm_file, "script", "main.js"), "scripts", true);
-			kev_close(sgm_file);
-
-			// generate a JSON manifest (used by, e.g. GetGameManifest())
-			duk_push_object(g_duk);
-			duk_push_lstring_t(g_duk, fs->name); duk_put_prop_string(g_duk, -2, "name");
-			duk_push_lstring_t(g_duk, fs->author); duk_put_prop_string(g_duk, -2, "author");
-			duk_push_lstring_t(g_duk, fs->summary); duk_put_prop_string(g_duk, -2, "summary");
-			duk_push_sprintf(g_duk, "%dx%d", fs->res_x, fs->res_y); duk_put_prop_string(g_duk, -2, "resolution");
-			duk_push_string(g_duk, path_cstr(fs->script_path)); duk_put_prop_string(g_duk, -2, "script");
-			fs->manifest = lstr_new(duk_json_encode(g_duk, -1));
-			duk_pop(g_duk);
 		}
 		else
 			goto on_error;

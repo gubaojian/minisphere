@@ -201,7 +201,6 @@ main(int argc, char* argv[])
 	al_register_event_source(g_events,
 		al_get_display_event_source(screen_display(g_screen)));
 	attach_input_display();
-	load_key_map();
 
 	// initialize shader support
 	initialize_shaders(screen_have_shaders(g_screen));
@@ -385,8 +384,6 @@ on_error:
 static void
 shutdown_engine(void)
 {
-	save_key_map();
-
 #if defined(MINISPHERE_SPHERUN)
 	shutdown_debugger();
 #endif
