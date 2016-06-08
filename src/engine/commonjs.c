@@ -48,7 +48,7 @@ cjs_eval_module(const char* filename)
 
 	console_log(1, "initializing JS module `%s`", filename);
 
-	source = sfs_fslurp(g_fs, filename, NULL, &source_size);
+	source = sfs_fslurp(g_fs, filename, &source_size);
 	code_string = lstr_from_buf(source, source_size);
 	free(source);
 
@@ -184,13 +184,13 @@ find_module(const char* id, const char* origin, const char* sys_origin)
 		path_append(path, filename);
 		path_collapse(path, true);
 		free(filename);
-		if (sfs_fexist(g_fs, path_cstr(path), NULL)) {
+		if (sfs_fexist(g_fs, path_cstr(path))) {
 			if (strcmp(path_filename_cstr(path), "package.json") != 0)
 				return path;
 			else {
 				if (!(main_path = load_package_json(path_cstr(path))))
 					goto next_filename;
-				if (sfs_fexist(g_fs, path_cstr(main_path), NULL)) {
+				if (sfs_fexist(g_fs, path_cstr(main_path))) {
 					path_free(path);
 					return main_path;
 				}
@@ -213,7 +213,7 @@ load_package_json(const char* filename)
 	path_t*   path;
 	
 	duk_top = duk_get_top(g_duk);
-	if (!(json = sfs_fslurp(g_fs, filename, NULL, &json_size)))
+	if (!(json = sfs_fslurp(g_fs, filename, &json_size)))
 		goto on_error;
 	duk_push_lstring(g_duk, json, json_size);
 	free(json);
@@ -227,7 +227,7 @@ load_package_json(const char* filename)
 	path = path_strip(path_new(filename));
 	path_append(path, duk_get_string(g_duk, -1));
 	path_collapse(path, true);
-	if (!sfs_fexist(g_fs, path_cstr(path), NULL))
+	if (!sfs_fexist(g_fs, path_cstr(path)))
 		goto on_error;
 	return path;
 

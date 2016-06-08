@@ -240,7 +240,7 @@ main(int argc, char* argv[])
 	// evaluate startup script
 	screen_show_mouse(g_screen, false);
 	script_path = get_sgm_script_path(g_fs);
-	if (!evaluate_script(path_cstr(script_path), false))
+	if (!cjs_eval_module(path_cstr(script_path)))
 		goto on_js_error;
 	duk_pop(g_duk);
 

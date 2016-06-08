@@ -205,7 +205,7 @@ sound_new(const char* path)
 	sound = calloc(1, sizeof(sound_t));
 	sound->path = strdup(path);
 
-	if (!(sound->file_data = sfs_fslurp(g_fs, sound->path, NULL, &sound->file_size)))
+	if (!(sound->file_data = sfs_fslurp(g_fs, sound->path, &sound->file_size)))
 		goto on_error;
 	sound->gain = 1.0;
 	sound->pan = 0.0;

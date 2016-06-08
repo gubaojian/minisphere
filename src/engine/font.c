@@ -79,7 +79,7 @@ font_load(const char* filename)
 	
 	memset(&rfn, 0, sizeof(struct rfn_header));
 
-	if ((file = sfs_fopen(g_fs, filename, NULL, "rb")) == NULL) goto on_error;
+	if ((file = sfs_fopen(g_fs, filename, "rb")) == NULL) goto on_error;
 	if (!(font = calloc(1, sizeof(font_t)))) goto on_error;
 	if (sfs_fread(&rfn, sizeof(struct rfn_header), 1, file) != 1)
 		goto on_error;

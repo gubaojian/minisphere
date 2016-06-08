@@ -34,50 +34,6 @@ shutdown_scripts(void)
 	console_log(1, "shutting down JS script manager");
 }
 
-bool
-evaluate_script(const char* filename, bool as_module)
-{
-	sfs_file_t*    file = NULL;
-	path_t*        path;
-	const char*    source_name;
-	lstring_t*     source_text = NULL;
-	char*          slurp;
-	size_t         size;
-	
-	if (as_module) {
-		if (!cjs_eval_module(filename))
-			return false;
-		return true;
-	}
-	else {
-		path = make_sfs_path(filename, NULL, false);
-		source_name = get_source_name(path_cstr(path));
-		if (!(slurp = sfs_fslurp(g_fs, filename, NULL, &size)))
-			goto on_error;
-		source_text = lstr_from_buf(slurp, size);
-		free(slurp);
-
-		// ready for launch in T-10...9...*munch*
-		duk_push_lstring_t(g_duk, source_text);
-		duk_push_string(g_duk, source_name);
-		if (duk_pcompile(g_duk, DUK_COMPILE_EVAL) != DUK_EXEC_SUCCESS)
-			goto on_error;
-		if (duk_pcall(g_duk, 0) != DUK_EXEC_SUCCESS)
-			goto on_error;
-
-		lstr_free(source_text);
-		path_free(path);
-		return true;
-	}
-
-on_error:
-	lstr_free(source_text);
-	path_free(path);
-	if (!duk_is_error(g_duk, -1))
-		duk_push_error_object(g_duk, DUK_ERR_ERROR, "script `%s` not found\n", filename);
-	return false;
-}
-
 script_t*
 compile_script(const lstring_t* source, const char* fmt_name, ...)
 {

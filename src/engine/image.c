@@ -95,7 +95,7 @@ image_load(const char* filename)
 	console_log(2, "loading image #%u as `%s`", s_next_image_id, filename);
 	
 	image = calloc(1, sizeof(image_t));
-	if (!(slurp = sfs_fslurp(g_fs, filename, NULL, &file_size)))
+	if (!(slurp = sfs_fslurp(g_fs, filename, &file_size)))
 		goto on_error;
 	al_file = al_open_memfile(slurp, file_size, "rb");
 

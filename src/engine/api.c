@@ -803,60 +803,8 @@ js_fs_exists(duk_context* ctx)
 {
 	const char* filename;
 
-	filename = duk_require_path(ctx, 0, NULL, false);
-	duk_push_boolean(ctx, sfs_fexist(g_fs, filename, NULL));
-	return 1;
-}
-
-static duk_ret_t
-js_GetDirectoryList(duk_context* ctx)
-{
-	int n_args = duk_get_top(ctx);
-	const char* dirname = n_args >= 1
-		? duk_require_path(ctx, 0, NULL, true)
-		: "";
-
-	vector_t*  list;
-	lstring_t* *p_filename;
-
-	iter_t iter;
-
-	list = list_filenames(g_fs, dirname, NULL, true);
-	duk_push_array(ctx);
-	iter = vector_enum(list);
-	while (p_filename = vector_next(&iter)) {
-		duk_push_string(ctx, lstr_cstr(*p_filename));
-		duk_put_prop_index(ctx, -2, (duk_uarridx_t)iter.index);
-		lstr_free(*p_filename);
-	}
-	vector_free(list);
-	return 1;
-}
-
-static duk_ret_t
-js_GetFileList(duk_context* ctx)
-{
-	const char* directory_name;
-	vector_t*   list;
-	int         num_args;
-
-	iter_t iter;
-	lstring_t* *p_filename;
-
-	num_args = duk_get_top(ctx);
-	directory_name = num_args >= 1
-		? duk_require_path(ctx, 0, NULL, true)
-		: "save";
-
-	list = list_filenames(g_fs, directory_name, NULL, false);
-	duk_push_array(ctx);
-	iter = vector_enum(list);
-	while (p_filename = vector_next(&iter)) {
-		duk_push_string(ctx, lstr_cstr(*p_filename));
-		duk_put_prop_index(ctx, -2, (duk_uarridx_t)iter.index);
-		lstr_free(*p_filename);
-	}
-	vector_free(list);
+	filename = duk_require_path(ctx, 0);
+	duk_push_boolean(ctx, sfs_fexist(g_fs, filename));
 	return 1;
 }
 
@@ -865,8 +813,8 @@ js_fs_mkdir(duk_context* ctx)
 {
 	const char* name;
 
-	name = duk_require_path(ctx, 0, NULL, false);
-	if (!sfs_mkdir(g_fs, name, NULL))
+	name = duk_require_path(ctx, 0);
+	if (!sfs_mkdir(g_fs, name))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to make directory `%s`", name);
 	return 0;
 }
@@ -878,9 +826,9 @@ js_fs_open(duk_context* ctx)
 	const char* filename;
 	const char* mode;
 
-	filename = duk_require_path(ctx, 0, NULL, false);
+	filename = duk_require_path(ctx, 0);
 	mode = duk_require_string(ctx, 1);
-	file = sfs_fopen(g_fs, filename, NULL, mode);
+	file = sfs_fopen(g_fs, filename, mode);
 	if (file == NULL)
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to open `%s` in mode `%s`",
 			filename, mode);
@@ -894,9 +842,9 @@ js_fs_rename(duk_context* ctx)
 	const char* name1;
 	const char* name2;
 
-	name1 = duk_require_path(ctx, 0, NULL, false);
-	name2 = duk_require_path(ctx, 1, NULL, false);
-	if (!sfs_rename(g_fs, name1, name2, NULL))
+	name1 = duk_require_path(ctx, 0);
+	name2 = duk_require_path(ctx, 1);
+	if (!sfs_rename(g_fs, name1, name2))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to rename `%s` to `%s`", name1, name2);
 	return 0;
 }
@@ -906,8 +854,8 @@ js_fs_rmdir(duk_context* ctx)
 {
 	const char* name;
 
-	name = duk_require_path(ctx, 0, NULL, false);
-	if (!sfs_rmdir(g_fs, name, NULL))
+	name = duk_require_path(ctx, 0);
+	if (!sfs_rmdir(g_fs, name))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to remove directory `%s`", name);
 	return 0;
 }
@@ -917,8 +865,8 @@ js_fs_unlink(duk_context* ctx)
 {
 	const char* filename;
 
-	filename = duk_require_path(ctx, 0, NULL, false);
-	if (!sfs_unlink(g_fs, filename, NULL))
+	filename = duk_require_path(ctx, 0);
+	if (!sfs_unlink(g_fs, filename))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to unlink `%s`", filename);
 	return 0;
 }
@@ -1671,7 +1619,7 @@ js_new_Font(duk_context* ctx)
 	const char* filename;
 	font_t*     font;
 
-	filename = duk_require_path(ctx, 0, NULL, false);
+	filename = duk_require_path(ctx, 0);
 	font = font_load(filename);
 	if (font == NULL)
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to load font `%s`", filename);
@@ -2029,7 +1977,7 @@ js_new_Image(duk_context* ctx)
 	}
 	else {
 		// create an Image by loading an image file
-		filename = duk_require_path(ctx, 0, NULL, false);
+		filename = duk_require_path(ctx, 0);
 		image = image_load(filename);
 		if (image == NULL)
 			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "Image(): unable to load image file `%s`", filename);
@@ -2247,8 +2195,8 @@ js_new_ShaderProgram(duk_context* ctx)
 
 	duk_get_prop_string(ctx, 0, "vertex");
 	duk_get_prop_string(ctx, 0, "fragment");
-	vs_filename = duk_require_path(ctx, -2, NULL, false);
-	fs_filename = duk_require_path(ctx, -1, NULL, false);
+	vs_filename = duk_require_path(ctx, -2);
+	fs_filename = duk_require_path(ctx, -1);
 	duk_pop_2(ctx);
 	if (!(shader = shader_new(vs_filename, fs_filename)))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "ShaderProgram(): failed to build shader from `%s`, `%s`", vs_filename, fs_filename);
@@ -2525,7 +2473,7 @@ js_new_Sound(duk_context* ctx)
 	sound_t*    sound;
 
 	num_args = duk_get_top(ctx);
-	filename = duk_require_path(ctx, 0, NULL, false);
+	filename = duk_require_path(ctx, 0);
 
 	if (!(sound = sound_new(filename)))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to load sound `%s`", filename);
@@ -2879,7 +2827,7 @@ js_new_Surface(duk_context* ctx)
 			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to create surface from image");
 	}
 	else {
-		filename = duk_require_path(ctx, 0, NULL, false);
+		filename = duk_require_path(ctx, 0);
 		image = image_load(filename);
 		if (image == NULL)
 			duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to load image `%s`", filename);

@@ -50,9 +50,9 @@ shader_new(const char* vs_filename, const char* fs_filename)
 	
 	console_log(2, "compiling new shader program #%u", s_next_id);
 	
-	if (!(vs_source = sfs_fslurp(g_fs, vs_filename, NULL, NULL)))
+	if (!(vs_source = sfs_fslurp(g_fs, vs_filename, NULL)))
 		goto on_error;
-	if (!(fs_source = sfs_fslurp(g_fs, fs_filename, NULL, NULL)))
+	if (!(fs_source = sfs_fslurp(g_fs, fs_filename, NULL)))
 		goto on_error;
 #ifdef MINISPHERE_USE_SHADERS
 	if (!(shader->program = al_create_shader(ALLEGRO_SHADER_GLSL)))
