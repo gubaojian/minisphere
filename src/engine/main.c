@@ -39,7 +39,6 @@ sandbox_t*           g_fs = NULL;
 path_t*              g_game_path = NULL;
 path_t*              g_last_game_path = NULL;
 screen_t*            g_screen = NULL;
-kevfile_t*           g_sys_conf;
 font_t*              g_sys_font = NULL;
 int                  g_res_x, g_res_y;
 
@@ -209,11 +208,7 @@ main(int argc, char* argv[])
 
 	// attempt to locate and load system font
 	console_log(1, "loading system default font");
-	if (g_sys_conf != NULL) {
-		filename = kev_read_string(g_sys_conf, "Font", "system.rfn");
-		g_sys_font = font_load(systempath(filename));
-	}
-	if (g_sys_font == NULL) {
+	if (!(g_sys_font = font_load("#/default.rfn"))) {
 		al_show_native_message_box(screen_display(g_screen), "No System Font Available", "A system font is required.",
 			"minisphere was unable to locate the system font or it failed to load.  As a usable font is necessary for correct operation, minisphere will now close.",
 			NULL, ALLEGRO_MESSAGEBOX_ERROR);
@@ -369,11 +364,6 @@ initialize_engine(void)
 	if (!(g_duk = duk_create_heap_default()))
 		goto on_error;
 
-	// load system configuraton
-	console_log(1, "loading system configuration");
-	if (!(g_sys_conf = kev_open(NULL, "#/system.ini", false)))
-		goto on_error;
-
 	// initialize engine components
 	initialize_rng();
 	initialize_async();
@@ -424,9 +414,6 @@ shutdown_engine(void)
 	g_events = NULL;
 	free_sandbox(g_fs);
 	g_fs = NULL;
-	if (g_sys_conf != NULL)
-		kev_close(g_sys_conf);
-	g_sys_conf = NULL;
 	al_uninstall_system();
 }
 

@@ -72,7 +72,6 @@ extern int                  g_framerate;
 extern path_t*              g_game_path;
 extern path_t*              g_last_game_path;
 extern screen_t*            g_screen;
-extern kevfile_t*           g_sys_conf;
 extern font_t*              g_sys_font;
 extern int                  g_res_x;
 extern int                  g_res_y;

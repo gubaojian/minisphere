@@ -74,20 +74,9 @@ shutdown_galileo(void)
 shader_t*
 get_default_shader(void)
 {
-	const char* fs_filename;
-	char*       fs_pathname;
-	const char* vs_filename;
-	char*       vs_pathname;
-
 	if (s_def_shader == NULL) {
 		console_log(3, "compiling Galileo default shaders");
-		vs_filename = kev_read_string(g_sys_conf, "GalileoVertShader", "shaders/galileo.vs.glsl");
-		fs_filename = kev_read_string(g_sys_conf, "GalileoFragShader", "shaders/galileo.fs.glsl");
-		vs_pathname = strdup(systempath(vs_filename));
-		fs_pathname = strdup(systempath(fs_filename));
-		s_def_shader = shader_new(vs_pathname, fs_pathname);
-		free(vs_pathname);
-		free(fs_pathname);
+		s_def_shader = shader_new("#/default.vert", "#/default.frag");
 	}
 	return s_def_shader;
 }
