@@ -4,10 +4,6 @@
  *  (c) 2015-2016 Fat Cerberus
 **/
 
-if (typeof exports === 'undefined') {
-	throw new TypeError("script must be loaded with require()");
-}
-
 const link = require('link');
 
 var binary =

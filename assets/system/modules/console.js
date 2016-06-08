@@ -4,13 +4,10 @@
  *  (c) 2015-2016 Fat Cerberus
 **/
 
-if (typeof exports === 'undefined') {
-	throw new TypeError("script must be loaded with require()");
-}
-
 const link    = require('link');
-const scenes  = require('./scenes');
-const threads = require('./threads');
+const prim    = require('prim');
+const scenes  = require('scenario');
+const threads = require('threads');
 
 module.exports = (function() {
 	var font = Font.Default;
@@ -20,7 +17,6 @@ module.exports = (function() {
 	var wasKeyDown = false;
 
 	var numLines = Math.floor((screen.height - 32) / font.height);
-	var logFileName = 'logPath' in game ? engine.game.logPath : null;
 	var bufferSize = 1000;
 	var prompt = "$";
 
@@ -187,18 +183,18 @@ module.exports = (function() {
 
 		// draw the command prompt...
 		var boxY = -22 * (1.0 - visible.fade);
-		Rectangle(0, boxY, screen.width, 22, new Color(0, 0, 0, visible.fade * 224));
+		prim.rect(screen, 0, boxY, screen.width, 22, Color.Black.fade(visible.fade * 224));
 		var promptWidth = font.getStringWidth(prompt + " ");
-		screen.drawText(6, 6 + boxY, prompt, font, Color.Black.fade(visible.fade * 192));
-		screen.drawText(5, 5 + boxY, prompt, font, Color.Gray.fade(visible.fade * 192));
-		screen.drawText(6 + promptWidth, 6 + boxY, entry, font, Color.Black.fade(visible.fade * 192));
-		screen.drawText(5 + promptWidth, 5 + boxY, entry, font, new Color(255, 255, 128, visible.fade * 192));
-		screen.drawText(5 + promptWidth + font.getStringWidth(entry), 5 + boxY, "_", font, cursorColor);
+		font.drawText(screen, 6, 6 + boxY, prompt, Color.Black.fade(visible.fade * 192));
+		font.drawText(screen, 5, 5 + boxY, prompt, Color.Gray.fade(visible.fade * 192));
+		font.drawText(screen, 6 + promptWidth, 6 + boxY, entry, Color.Black.fade(visible.fade * 192));
+		font.drawText(screen, 5 + promptWidth, 5 + boxY, entry, new Color(255, 255, 128, visible.fade * 192));
+		font.drawText(screen, 5 + promptWidth + font.getStringWidth(entry), 5 + boxY, "_", cursorColor);
 
 		// ...then the console output
 		var boxHeight = numLines * font.height + 10;
 		var boxY = screen.height - boxHeight * visible.fade;
-		Rectangle(0, boxY, screen.width, boxHeight, new Color(0, 0, 0, visible.fade * 192));
+		prim.rect(screen, 0, boxY, screen.width, boxHeight, new Color(0, 0, 0, visible.fade * 192));
 		var oldClip = GetClippingRectangle();
 		SetClippingRectangle(5, boxY + 5, screen.width - 10, boxHeight - 10);
 		for (var i = -1; i < numLines + 1; ++i) {
@@ -207,8 +203,8 @@ module.exports = (function() {
 			if (lineToDraw >= 0 && buffer[lineInBuffer] != null) {
 				var y = boxY + 5 + i * font.height;
 				y += (visible.line - Math.floor(visible.line)) * font.height;
-				screen.drawText(6, y + 1, buffer[lineInBuffer], font, Color.Black.fade(visible.fade * 192));
-				screen.drawText(5, y, buffer[lineInBuffer], font, Color.White.fade(visible.fade * 192));
+				font.drawText(screen, 6, y + 1, buffer[lineInBuffer], Color.Black.fade(visible.fade * 192));
+				font.drawText(screen, 5, y, buffer[lineInBuffer], Color.White.fade(visible.fade * 192));
 			}
 		}
 		SetClippingRectangle(oldClip.x, oldClip.y, oldClip.width, oldClip.height);

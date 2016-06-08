@@ -2314,9 +2314,9 @@ js_Shape_draw(duk_context* ctx)
 	num_args = duk_get_top(ctx) - 1;
 	shape = duk_require_sphere_obj(ctx, -1, "Shape");
 	if (num_args >= 1)
-		transform = duk_require_sphere_obj(ctx, 0, "Transform");
+		surface = duk_require_sphere_obj(ctx, 0, "Surface");
 	if (num_args >= 2)
-		surface = duk_require_sphere_obj(ctx, 1, "Surface");
+		transform = duk_require_sphere_obj(ctx, 1, "Transform");
 
 	shader_use(get_default_shader());
 	shape_draw(shape, transform, surface);

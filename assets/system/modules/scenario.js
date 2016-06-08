@@ -7,12 +7,8 @@
  *  for Sphere 1.5.
 **/
 
-if (typeof exports === 'undefined') {
-    throw new TypeError("script must be loaded with require()");
-}
-
 const link    = require('link');
-const threads = require('./threads');
+const threads = require('threads');
 
 var screenMask = new Color(0, 0, 0, 0);
 
