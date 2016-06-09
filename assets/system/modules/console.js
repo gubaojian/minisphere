@@ -6,7 +6,7 @@
 
 const link    = require('link');
 const prim    = require('prim');
-const scenes  = require('scenario');
+const scenes  = require('scenes');
 const threads = require('threads');
 
 module.exports = (function() {
@@ -39,23 +39,6 @@ module.exports = (function() {
 	log(engine.game.name + " [miniRT]");
 	log(engine.name + " " + engine.version + " (Sphere " + engine.apiVersion + "." + (engine.apiLevel - 1) + ")");
 	log("");
-
-	register('keymap', this, {
-		'set': function(playerKey, keyName, playerID) {
-			if (arguments.length < 2)
-				return log("keymap set: 2+ arguments expected");
-			playerID = playerID !== undefined ? playerID : 1;
-			if (playerID < 1 || playerID > 4)
-				return log("keymap set: Player ID out of range (" + playerID + ")");
-			var keyConst, playerKeyConst;
-			if ((keyConst = global["KEY_" + keyName.toUpperCase()]) == undefined)
-				return log("keymap set: Invalid key name `" + keyName.toUpperCase() + "`");
-			if ((playerKeyConst = global["PLAYER_KEY_" + playerKey.toUpperCase()]) == undefined)
-				return log("keymap set: Unknown player key `" + keyName.toUpperCase() + "`");
-			SetPlayerKey(playerID - 1, playerKeyConst, keyConst);
-			log("PLAYER_KEY_" + playerKey.toUpperCase() + " mapped to KEY_" + keyName.toUpperCase());
-		}
-	});
 
 	return {
 		isOpen:     isOpen,
@@ -195,8 +178,7 @@ module.exports = (function() {
 		var boxHeight = numLines * font.height + 10;
 		var boxY = screen.height - boxHeight * visible.fade;
 		prim.rect(screen, 0, boxY, screen.width, boxHeight, new Color(0, 0, 0, visible.fade * 192));
-		var oldClip = GetClippingRectangle();
-		SetClippingRectangle(5, boxY + 5, screen.width - 10, boxHeight - 10);
+		screen.clipTo(5, boxY + 5, screen.width - 10, boxHeight - 10);
 		for (var i = -1; i < numLines + 1; ++i) {
 			var lineToDraw = (nextLine - numLines) + i - Math.floor(visible.line);
 			var lineInBuffer = lineToDraw % bufferSize;
@@ -207,7 +189,7 @@ module.exports = (function() {
 				font.drawText(screen, 5, y, buffer[lineInBuffer], Color.White.fade(visible.fade * 192));
 			}
 		}
-		SetClippingRectangle(oldClip.x, oldClip.y, oldClip.width, oldClip.height);
+		screen.clipTo(0, 0, screen.width, screen.height);
 	};
 
 	function update()

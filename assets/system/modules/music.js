@@ -4,8 +4,8 @@
  *  (c) 2015-2016 Fat Cerberus
 **/
 
-const console = require('./console');
-const scenes  = require('./scenes');
+const console = require('console');
+const scenes  = require('scenes');
 
 var music =
 module.exports = (function()

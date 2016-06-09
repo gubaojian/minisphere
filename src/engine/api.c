@@ -51,6 +51,7 @@ static duk_ret_t js_random_string              (duk_context* ctx);
 static duk_ret_t js_random_uniform             (duk_context* ctx);
 static duk_ret_t js_screen_get_frameRate       (duk_context* ctx);
 static duk_ret_t js_screen_set_frameRate       (duk_context* ctx);
+static duk_ret_t js_screen_clipTo              (duk_context* ctx);
 static duk_ret_t js_screen_flip                (duk_context* ctx);
 static duk_ret_t js_screen_resize              (duk_context* ctx);
 static duk_ret_t js_abort                      (duk_context* ctx);
@@ -310,6 +311,7 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(g_duk, "random", "uniform", js_random_uniform);
 	api_register_static_obj(g_duk, NULL, "screen", "Surface", NULL);
 	api_register_static_prop(g_duk, "screen", "frameRate", js_screen_get_frameRate, js_screen_set_frameRate);
+	api_register_static_func(g_duk, "screen", "clipTo", js_screen_clipTo);
 	api_register_static_func(g_duk, "screen", "flip", js_screen_flip);
 	api_register_static_func(g_duk, "screen", "resize", js_screen_resize);
 
@@ -1020,6 +1022,22 @@ js_screen_set_frameRate(duk_context* ctx)
 	if (framerate < 0)
 		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "frameRate cannot be negative");
 	g_framerate = framerate;
+	return 0;
+}
+
+static duk_ret_t
+js_screen_clipTo(duk_context* ctx)
+{
+	int x;
+	int y;
+	int width;
+	int height;
+	
+	x = duk_require_int(ctx, 0);
+	y = duk_require_int(ctx, 1);
+	width = duk_require_int(ctx, 2);
+	height = duk_require_int(ctx, 3);
+	screen_set_clipping(g_screen, new_rect(x, y, x + width, y + height));
 	return 0;
 }
 
