@@ -373,12 +373,23 @@ api_register_const(duk_context* ctx, const char* enum_name, const char* name, do
 		}
 	}
 
+	// generate TypeScript-style symmetrical enumerations, in other words:
+	//     enum[key] = value
+	//     enum[value] = key
 	duk_push_string(ctx, name);
 	duk_push_number(ctx, value);
 	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
 		| DUK_DEFPROP_CLEAR_ENUMERABLE
 		| DUK_DEFPROP_CLEAR_WRITABLE
 		| DUK_DEFPROP_SET_CONFIGURABLE);
+	duk_push_number(ctx, value);
+	duk_to_string(ctx, -1);
+	duk_push_string(ctx, name);
+	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
+		| DUK_DEFPROP_CLEAR_ENUMERABLE
+		| DUK_DEFPROP_CLEAR_WRITABLE
+		| DUK_DEFPROP_SET_CONFIGURABLE);
+
 	if (enum_name != NULL)
 		duk_pop(ctx);
 	duk_pop(ctx);
