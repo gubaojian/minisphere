@@ -36,8 +36,8 @@ module.exports = (function() {
 		getInput: getInput,
 	}, 100);
 
-	log(engine.game.name + " [miniRT]");
-	log(engine.name + " " + engine.version + " (Sphere " + engine.apiVersion + "." + (engine.apiLevel - 1) + ")");
+	log(engine.game.name + " Console");
+	log(engine.name + " " + engine.version + " / API v" + engine.apiVersion + " Lv." + engine.apiLevel);
 	log("");
 
 	return {
