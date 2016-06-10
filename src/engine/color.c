@@ -169,7 +169,7 @@ static duk_ret_t js_Color_fade           (duk_context* ctx);
 ALLEGRO_COLOR
 nativecolor(color_t color)
 {
-	return al_map_rgba(color.r, color.g, color.b, color.alpha);
+	return al_map_rgba(color.r, color.g, color.b, color.a);
 }
 
 color_t
@@ -182,19 +182,19 @@ color_mix(color_t color, color_t other, float w1, float w2)
 	blend.r = (color.r * w1 + other.r * w2) / sigma;
 	blend.g = (color.g * w1 + other.g * w2) / sigma;
 	blend.b = (color.b * w1 + other.b * w2) / sigma;
-	blend.alpha = (color.alpha * w1 + other.alpha * w2) / sigma;
+	blend.a = (color.a * w1 + other.a * w2) / sigma;
 	return blend;
 }
 
 color_t
-color_new(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha)
+color_new(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 {
 	color_t color;
 
 	color.r = r;
 	color.g = g;
 	color.b = b;
-	color.alpha = alpha;
+	color.a = a;
 	return color;
 }
 
@@ -233,7 +233,7 @@ duk_push_sphere_color(duk_context* ctx, color_t color)
 	duk_push_number(ctx, color.r);
 	duk_push_number(ctx, color.g);
 	duk_push_number(ctx, color.b);
-	duk_push_number(ctx, color.alpha);
+	duk_push_number(ctx, color.a);
 	duk_new(ctx, 4);
 	duk_remove(ctx, -2);
 }
@@ -242,18 +242,18 @@ color_t
 duk_require_sphere_color(duk_context* ctx, duk_idx_t index)
 {
 	int r, g, b;
-	int alpha;
+	int a;
 	
 	duk_require_sphere_obj(ctx, index, "Color");
-	duk_get_prop_string(ctx, index, "red"); r = duk_get_int(ctx, -1); duk_pop(ctx);
-	duk_get_prop_string(ctx, index, "green"); g = duk_get_int(ctx, -1); duk_pop(ctx);
-	duk_get_prop_string(ctx, index, "blue"); b = duk_get_int(ctx, -1); duk_pop(ctx);
-	duk_get_prop_string(ctx, index, "alpha"); alpha = duk_get_int(ctx, -1); duk_pop(ctx);
+	duk_get_prop_string(ctx, index, "r"); r = duk_get_int(ctx, -1); duk_pop(ctx);
+	duk_get_prop_string(ctx, index, "g"); g = duk_get_int(ctx, -1); duk_pop(ctx);
+	duk_get_prop_string(ctx, index, "b"); b = duk_get_int(ctx, -1); duk_pop(ctx);
+	duk_get_prop_string(ctx, index, "a"); a = duk_get_int(ctx, -1); duk_pop(ctx);
 	r = r < 0 ? 0 : r > 255 ? 255 : r;
 	g = g < 0 ? 0 : g > 255 ? 255 : g;
 	b = b < 0 ? 0 : b > 255 ? 255 : b;
-	alpha = alpha < 0 ? 0 : alpha > 255 ? 255 : alpha;
-	return color_new(r, g, b, alpha);
+	a = a < 0 ? 0 : a > 255 ? 255 : a;
+	return color_new(r, g, b, a);
 }
 
 static duk_ret_t
@@ -322,7 +322,7 @@ js_Color_of(duk_context* ctx)
 	if (hex_length != strlen(name) - 1 || (hex_length != 6 && hex_length != 8))
 		duk_error_ni(ctx, -1, DUK_ERR_TYPE_ERROR, "invalid RGB signature `%s`", name);
 	value = strtoul(&name[1], NULL, 16);
-	color.alpha = hex_length == 8 ? (value >> 24) & 0xFF : 255;
+	color.a = hex_length == 8 ? (value >> 24) & 0xFF : 255;
 	color.r = (value >> 16) & 0xFF;
 	color.g = (value >> 8) & 0xFF;
 	color.b = value & 0xFF;
@@ -337,20 +337,20 @@ js_new_Color(duk_context* ctx)
 	int r = duk_require_int(ctx, 0);
 	int g = duk_require_int(ctx, 1);
 	int b = duk_require_int(ctx, 2);
-	int alpha = n_args >= 4 ? duk_require_int(ctx, 3) : 255;
+	int a = n_args >= 4 ? duk_require_int(ctx, 3) : 255;
 
 	// clamp components to 8-bit [0-255]
 	r = r < 0 ? 0 : r > 255 ? 255 : r;
 	g = g < 0 ? 0 : g > 255 ? 255 : g;
 	b = b < 0 ? 0 : b > 255 ? 255 : b;
-	alpha = alpha < 0 ? 0 : alpha > 255 ? 255 : alpha;
+	a = a < 0 ? 0 : a > 255 ? 255 : a;
 
 	// construct a Color object
 	duk_push_sphere_obj(ctx, "Color", NULL);
-	duk_push_int(ctx, r); duk_put_prop_string(ctx, -2, "red");
-	duk_push_int(ctx, g); duk_put_prop_string(ctx, -2, "green");
-	duk_push_int(ctx, b); duk_put_prop_string(ctx, -2, "blue");
-	duk_push_int(ctx, alpha); duk_put_prop_string(ctx, -2, "alpha");
+	duk_push_int(ctx, r); duk_put_prop_string(ctx, -2, "r");
+	duk_push_int(ctx, g); duk_put_prop_string(ctx, -2, "g");
+	duk_push_int(ctx, b); duk_put_prop_string(ctx, -2, "b");
+	duk_push_int(ctx, a); duk_put_prop_string(ctx, -2, "a");
 	return 1;
 }
 
@@ -366,7 +366,7 @@ js_Color_get_name(duk_context* ctx)
 
 	p = &X11_COLOR[0];
 	while (p->name != NULL) {
-		if (color.r == p->r && color.g == p->g && color.b == p->b && color.alpha == p->a) {
+		if (color.r == p->r && color.g == p->g && color.b == p->b && color.a == p->a) {
 			duk_eval_string(ctx, "''.toLowerCase");
 			duk_push_string(ctx, p->name);
 			duk_call_method(ctx, 0);
@@ -375,7 +375,7 @@ js_Color_get_name(duk_context* ctx)
 		++p;
 	}
 	
-	duk_push_sprintf(ctx, "#%.2x%.2x%.2x%.2x", color.alpha, color.r, color.g, color.b);
+	duk_push_sprintf(ctx, "#%.2x%.2x%.2x%.2x", color.a, color.r, color.g, color.b);
 	return 1;
 }
 
@@ -402,7 +402,7 @@ js_Color_fade(duk_context* ctx)
 	alpha = duk_require_int(ctx, 0);
 
 	alpha = alpha < 0 ? 0 : alpha > 255 ? 255 : alpha;
-	color.alpha = color.alpha * alpha / 255;
+	color.a = color.a * alpha / 255;
 	duk_push_sphere_color(ctx, color);
 	return 1;
 }

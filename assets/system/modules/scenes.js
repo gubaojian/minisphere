@@ -17,7 +17,7 @@ module.exports = (function()
 {
 	renderScenes = function()
 	{
-		if (screenMask.alpha > 0) {
+		if (screenMask.a > 0) {
 			prim.rect(screen, 0, 0, screen.width, screen.height, screenMask);
 		}
 	};
@@ -422,7 +422,7 @@ scenes.scenelet('marquee',
 		var textX = screen.width - this.scroll * this.windowSize;
 		var textY = boxY + boxHeight / 2 - this.textHeight / 2;
 		prim.rect(screen, 0, boxY, screen.width, boxHeight, this.background);
-		this.font.drawText(screen, textX + 1, textY + 1, this.text, Color.Black.fade(this.color.alpha));
+		this.font.drawText(screen, textX + 1, textY + 1, this.text, Color.Black.fade(this.color.a));
 		this.font.drawText(screen, textX, textY, this.text, this.color);
 	},
 	update: function(scene) {
