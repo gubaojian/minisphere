@@ -3,11 +3,11 @@
  *  advanced scene manager using multiple timelines and cooperative threading
  *  (c) 2015-2016 Fat Cerberus
  *
- *  miniRT/scenes is based on the Scenario cutscene engine originally written
- *  for Sphere 1.5.
+ *  based on the Scenario cutscene engine originally written for Sphere 1.5
 **/
 
 const link    = require('link');
+const prim    = require('prim');
 const threads = require('threads');
 
 var screenMask = new Color(0, 0, 0, 0);
@@ -18,7 +18,7 @@ module.exports = (function()
 	renderScenes = function()
 	{
 		if (screenMask.alpha > 0) {
-			ApplyColorMask(screenMask);
+			prim.rect(screen, 0, 0, screen.width, screen.height, screenMask);
 		}
 	};
 
@@ -369,47 +369,6 @@ scenes.scenelet('call',
 	}
 });
 
-// .facePerson() scenelet
-// Changes the facing direction of a map entity.
-// Arguments:
-//     person:    The name of the entity whose direction to change.
-//     direction: The name of the new direction.
-scenes.scenelet('facePerson',
-{
-	start: function(scene, person, direction) {
-		var faceCommand;
-		switch (direction.toLowerCase()) {
-			case "n": case "north":
-				faceCommand = COMMAND_FACE_NORTH;
-				break;
-			case "ne": case "northeast":
-				faceCommand = COMMAND_FACE_NORTHEAST;
-				break;
-			case "e": case "east":
-				faceCommand = COMMAND_FACE_EAST;
-				break;
-			case "se": case "southeast":
-				faceCommand = COMMAND_FACE_SOUTHEAST;
-				break;
-			case "s": case "south":
-				faceCommand = COMMAND_FACE_SOUTH;
-				break;
-			case "sw": case "southwest":
-				faceCommand = COMMAND_FACE_SOUTHWEST;
-				break;
-			case "w": case "west":
-				faceCommand = COMMAND_FACE_WEST;
-				break;
-			case "nw": case "northwest":
-				faceCommand = COMMAND_FACE_NORTHWEST;
-				break;
-			default:
-				faceCommand = COMMAND_WAIT;
-		}
-		QueuePersonCommand(person, faceCommand, false);
-	}
-});
-
 // .fadeTo() scenelet
 // Fades the screen mask to a specified color.
 // Arguments:
@@ -426,69 +385,6 @@ scenes.scenelet('fadeTo',
 	},
 	update: function(scene) {
 		return this.fader.isRunning();
-	}
-});
-
-// .focusOnPerson() scenelet
-// Pans the camera to a point centered over a specified map entity.
-// Arguments:
-//     person:   The name of the entity to focus on.
-//     duration: Optional. The length of the panning operation, in seconds.
-//               (default: 0.25)
-scenes.scenelet('focusOnPerson',
-{
-	start: function(scene, person, duration) {
-		duration = duration !== undefined ? duration : 0.25;
-		
-		this.pan = new scenes.Scene()
-			.panTo(GetPersonX(person), GetPersonY(person), duration)
-			.run();
-	},
-	update: function(scene) {
-		return this.pan.isRunning();
-	}
-});
-
-// .followPerson() scenelet
-// Pans to and attaches the camera to a specified map entity.
-// Arguments:
-//     person: The name of the entity to follow.
-scenes.scenelet('followPerson',
-{
-	start: function(scene, person) {
-		this.person = person;
-		this.pan = new scenes.Scene()
-			.focusOnPerson(person)
-			.run();
-	},
-	update: function(scene) {
-		return this.pan.isRunning();
-	},
-	finish: function(scene) {
-		AttachCamera(this.person);
-	}
-});
-
-// .hidePerson() scenelet
-// Hides a map entity and prevents it from obstructing other entities.
-// Arguments:
-//     person: The name of the entity to hide.
-scenes.scenelet('hidePerson',
-{
-	start: function(scene, person) {
-		SetPersonVisible(person, false);
-		IgnorePersonObstructions(person, true);
-	}
-});
-
-// .killPerson() scenelet
-// Destroys a map entity.
-// Arguments:
-//     person: The name of the entity to destroy.
-scenes.scenelet('killPerson',
-{
-	start: function(scene, person) {
-		DestroyPerson(person);
 	}
 });
 
@@ -525,140 +421,12 @@ scenes.scenelet('marquee',
 		var boxY = screen.height / 2 - boxHeight / 2;
 		var textX = screen.width - this.scroll * this.windowSize;
 		var textY = boxY + boxHeight / 2 - this.textHeight / 2;
-		Rectangle(0, boxY, screen.width, boxHeight, this.background);
-		this.font.setColorMask(new Color(0, 0, 0, this.color.alpha));
-		this.font.drawText(textX + 1, textY + 1, this.text);
-		this.font.setColorMask(this.color);
-		this.font.drawText(textX, textY, this.text);
+		prim.rect(screen, 0, boxY, screen.width, boxHeight, this.background);
+		this.font.drawText(screen, textX + 1, textY + 1, this.text, Color.Black.fade(this.color.alpha));
+		this.font.drawText(screen, textX, textY, this.text, this.color);
 	},
 	update: function(scene) {
 		return this.animation.isRunning();
-	}
-});
-
-// .maskPerson() scenelet
-scenes.scenelet('maskPerson',
-{
-	start: function(scene, name, newMask, duration) {
-		duration = duration !== undefined ? duration : 0.25;
-		
-		this.name = name;
-		this.mask = GetPersonMask(this.name);
-		this.fade = new scenes.Scene()
-			.tween(this.mask, duration, 'easeInOutSine', newMask)
-			.run();
-	},
-	update: function(scene) {
-		SetPersonMask(this.name, this.mask);
-		return this.fade.isRunning();
-	}
-});
-
-// .movePerson() scenelet
-// Instructs a map entity to move a specified distance.
-// Arguments:
-//     person:    The person to move.
-//     direction: The direction in which to move the entity.
-//     distance:  The distance the entity should move.
-//     speed:     The number of pixels per frame the entity should move.
-//     faceFirst: Optional. If this is false, the entity will move without changing its facing
-//                direction. (default: true)
-scenes.scenelet('movePerson',
-{
-	start: function(scene, person, direction, distance, speed, faceFirst) {
-		faceFirst = faceFirst !== undefined ? faceFirst : true;
-		
-		if (!isNaN(speed)) {
-			speedVector = [ speed, speed ];
-		} else {
-			speedVector = speed;
-		}
-		this.person = person;
-		this.oldSpeedVector = [ GetPersonSpeedX(person), GetPersonSpeedY(person) ];
-		if (speedVector != null) {
-			SetPersonSpeedXY(this.person, speedVector[0], speedVector[1]);
-		} else {
-			speedVector = this.oldSpeedVector;
-		}
-		var xMovement;
-		var yMovement;
-		var faceCommand;
-		var stepCount;
-		switch (direction) {
-			case "n": case "north":
-				faceCommand = COMMAND_FACE_NORTH;
-				xMovement = COMMAND_WAIT;
-				yMovement = COMMAND_MOVE_NORTH;
-				stepCount = distance / speedVector[1];
-				break;
-			case "e": case "east":
-				faceCommand = COMMAND_FACE_EAST;
-				xMovement = COMMAND_MOVE_EAST;
-				yMovement = COMMAND_WAIT;
-				stepCount = distance / speedVector[0];
-				break;
-			case "s": case "south":
-				faceCommand = COMMAND_FACE_SOUTH;
-				xMovement = COMMAND_WAIT;
-				yMovement = COMMAND_MOVE_SOUTH;
-				stepCount = distance / speedVector[1];
-				break;
-			case "w": case "west":
-				faceCommand = COMMAND_FACE_WEST;
-				xMovement = COMMAND_MOVE_WEST;
-				yMovement = COMMAND_WAIT;
-				stepCount = distance / speedVector[0];
-				break;
-			default:
-				faceCommand = COMMAND_WAIT;
-				xMovement = COMMAND_WAIT;
-				yMovement = COMMAND_WAIT;
-				stepCount = 0;
-		}
-		if (faceFirst) {
-			QueuePersonCommand(this.person, faceCommand, true);
-		}
-		for (iStep = 0; iStep < stepCount; ++iStep) {
-			QueuePersonCommand(this.person, xMovement, true);
-			QueuePersonCommand(this.person, yMovement, true);
-			QueuePersonCommand(this.person, COMMAND_WAIT, false);
-		}
-		return true;
-	},
-	update: function(scene) {
-		return !IsCommandQueueEmpty(this.person);
-	},
-	finish: function(scene) {
-		SetPersonSpeedXY(this.person, this.oldSpeedVector[0], this.oldSpeedVector[1]);
-	}
-});
-
-// .panTo() scenelet
-// Pans the map camera to center on a specified location on the map.
-// Arguments:
-//     x:        The X coordinate of the location to pan to.
-//     y:        The Y coordinate of the location to pan to.
-//     duration: Optional. The length of the panning operation, in seconds. (default: 0.25)
-scenes.scenelet('panTo',
-{
-	start: function(scene, x, y, duration) {
-		duration = duration !== undefined ? duration : 0.25;
-		
-		DetachCamera();
-		var targetXY = {
-			cameraX: x,
-			cameraY: y
-		};
-		this.cameraX = GetCameraX();
-		this.cameraY = GetCameraY();
-		this.pan = new scenes.Scene()
-			.tween(this, duration, 'easeOutQuad', targetXY)
-			.run();
-	},
-	update: function(scene) {
-		SetCameraX(this.cameraX);
-		SetCameraY(this.cameraY);
-		return this.pan.isRunning();
 	}
 });
 
@@ -690,27 +458,6 @@ scenes.scenelet('playSound',
 	},
 	update: function(scene) {
 		return this.sound.isPlaying();
-	}
-});
-
-// .showPerson() scenelet
-// Makes a map entity visible and enables obstruction.
-// Arguments:
-//     person: The name of the entity to show.
-scenes.scenelet('showPerson',
-{
-	start: function(scene, person) {
-		SetPersonVisible(person, true);
-		IgnorePersonObstructions(person, false);
-	}
-});
-
-// .spriteset() scenelet
-scenes.scenelet('setSprite',
-{
-	start: function(scene, name, spriteFile) {
-		var spriteset = new Spriteset(spriteFile);
-		SetPersonSpriteset(name, spriteset);
 	}
 });
 
@@ -864,17 +611,6 @@ scenes.scenelet('tween',
 			this.change[p] = endValues[p] - object[p];
 			this.startValues[p] = object[p];
 			isChanged = isChanged || this.change[p] != 0;
-		}
-		var specialPropertyNames = [
-			'red', 'green', 'blue', 'alpha'
-		];
-		for (var i = 0; i < specialPropertyNames.length; ++i) {
-			var p = specialPropertyNames[i];
-			if (!(p in this.change) && p in endValues) {
-				this.change[p] = endValues[p] - object[p];
-				this.startValues[p] = object[p];
-				isChanged = isChanged || this.change[p] != 0;
-			}
 		}
 		if (!isChanged) {
 			this.elapsed = this.duration;
