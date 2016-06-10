@@ -245,11 +245,6 @@ main(int argc, char* argv[])
 		goto on_js_error;
 	duk_pop(g_duk);
 
-	// call game() function in script
-	duk_get_global_string(g_duk, "game");
-	if (duk_is_callable(g_duk, -1) && duk_pcall(g_duk, 0) != DUK_EXEC_SUCCESS)
-		goto on_js_error;
-	duk_pop(g_duk);
 	exit_game(false);
 
 on_js_error:

@@ -43,16 +43,16 @@ function ellipse(surface, x, y, rx, ry, color, color2)
 {
 	color2 = color2 || color;
 
-	var numSegments = 10 * Math.sqrt((rx + ry) / 2.0);
+	var numSegments = Math.ceil(10 * Math.sqrt((rx + ry) / 2.0));
 	var vlist = [ { x: x, y: y, color: color } ];
 	var pi2 = 2 * Math.PI;
 	var cos = Math.cos;
 	var sin = Math.sin;
-	for (var i = 1; i <= numSegments; ++i) {
+	for (var i = 0; i < numSegments; ++i) {
 		var phi = pi2 * i / numSegments;
 		var c = cos(phi);
 		var s = sin(phi);
-		vlist[i] = {
+		vlist[i + 1] = {
 			x: x + c * rx,
 			y: y - s * ry,
 			color: color2
@@ -86,7 +86,7 @@ function lineCircle(surface, x, y, radius, color, color2)
 
 function lineEllipse(surface, x, y, rx, ry, color)
 {
-	var numSegments = 10 * Math.sqrt((rx + ry) / 2.0);
+	var numSegments = Math.ceil(10 * Math.sqrt((rx + ry) / 2.0));
 	var vlist = [];
 	var pi2 = 2 * Math.PI;
 	var cos = Math.cos;
