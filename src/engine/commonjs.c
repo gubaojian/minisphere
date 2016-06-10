@@ -88,7 +88,8 @@ cjs_eval_module(const char* filename)
 		duk_push_string(g_duk, " })");
 		duk_concat(g_duk, 3);
 		duk_push_string(g_duk, filename);
-		duk_compile(g_duk, DUK_COMPILE_EVAL);
+		if (duk_pcompile(g_duk, DUK_COMPILE_EVAL) != DUK_EXEC_SUCCESS)
+			goto on_error;
 		duk_call(g_duk, 0);
 		lstr_free(code_string);
 

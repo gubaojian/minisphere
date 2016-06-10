@@ -107,11 +107,16 @@ function lineEllipse(surface, x, y, rx, ry, color)
 
 function lineRect(surface, x, y, width, height, color)
 {
+	var x1 = (x >> 0) + 0.5;
+	var y1 = (y >> 0) + 0.5;
+	var x2 = x1 + (width >> 0);
+	var y2 = y1 + (height >> 0);
+
 	var shape = new Shape([
-		{ x: x, y: y, color: color },
-		{ x: x + width, y: y, color: color },
-		{ x: x + width, y: y + height, color: color },
-		{ x: x, y: y + height, color: color }
+		{ x: x1, y: y1, color: color },
+		{ x: x2, y: y1, color: color },
+		{ x: x2, y: y2, color: color },
+		{ x: x1, y: y2, color: color }
 	], null, ShapeType.LineLoop);
 	shape.draw(surface);
 }

@@ -1032,7 +1032,7 @@ js_screen_clipTo(duk_context* ctx)
 	int y;
 	int width;
 	int height;
-	
+
 	x = duk_require_int(ctx, 0);
 	y = duk_require_int(ctx, 1);
 	width = duk_require_int(ctx, 2);
