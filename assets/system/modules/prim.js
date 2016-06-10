@@ -68,20 +68,43 @@ function ellipse(surface, x, y, rx, ry, color, color2)
 	shape.draw(surface);
 }
 
-function line(surface, x1, y1, x2, y2, color1, color2)
+function fill(surface, color)
+{
+	rect(surface, 0, 0, surface.width, surface.height, color);
+}
+
+function line(surface, x1, y1, x2, y2, thickness, color1, color2)
 {
 	color2 = color2 || color1;
-	
-	var shape = new Shape([
-		{ x: x1, y: y1, color: color1 },
-		{ x: x2, y: y2, color: color2 }
-	], null, ShapeType.Lines);
+
+	var shape;
+	if (thickness <= 0.0) {
+		shape = new Shape([
+			{ x: x1, y: y1, color: color1 },
+			{ x: x2, y: y2, color: color2 }
+		], null, ShapeType.Lines);
+	}
+	else {
+		var xSize = x2 - x1;
+		var ySize = y2 - y1;
+		var length = Math.sqrt(xSize*xSize + ySize*ySize);
+		if (length == 0.0)
+			return;
+		var tx = 0.5 * thickness * (y2 - y1) / length;
+		var ty = 0.5 * thickness * -(x2 - x1) / length;
+		shape = new Shape([
+			{ x: x1 + tx, y: y1 + ty, color: color1 },
+			{ x: x1 - tx, y: y1 - ty, color: color1 },
+			{ x: x2 - tx, y: y2 - ty, color: color2 },
+			{ x: x2 + tx, y: y2 + ty, color: color2 }
+		], null, ShapeType.Fan);
+	}
 	shape.draw(surface);
 }
 
-function lineCircle(surface, x, y, radius, color, color2)
+function lineCircle(surface, x, y, radius, color)
 {
-	lineEllipse(surface, x, y, radius, radius, color, color2);
+	lineEllipse(surface, x, y, radius, radius, color);
 }
 
 function lineEllipse(surface, x, y, rx, ry, color)
@@ -112,13 +135,10 @@ function lineRect(surface, x, y, width, height, color)
 	var x2 = x1 + (width >> 0);
 	var y2 = y1 + (height >> 0);
 
-	var shape = new Shape([
-		{ x: x1, y: y1, color: color },
-		{ x: x2, y: y1, color: color },
-		{ x: x2, y: y2, color: color },
-		{ x: x1, y: y2, color: color }
-	], null, ShapeType.LineLoop);
-	shape.draw(surface);
+	line(surface, x1, y1, x2, y1, 1, color);
+	line(surface, x2, y1, x2, y2, 1, color);
+	line(surface, x1, y2, x2, y2, 1, color);
+	line(surface, x1, y1, x1, y2, 1, color);
 }
 
 function point(surface, x, y, color)
@@ -148,7 +168,7 @@ function triangle(surface, x1, y1, x2, y2, x3, y3, color1, color2, color3)
 {
 	color2 = color2 || color1;
 	color3 = color3 || color1;
-	
+
 	var shape = new Shape([
 		{ x: x1, y: y1, color: color1 },
 		{ x: x2, y: y2, color: color2 },
