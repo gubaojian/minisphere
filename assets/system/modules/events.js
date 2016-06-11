@@ -1,9 +1,10 @@
 /**
- *  miniRT/delegates CommonJS module
+ *  miniRT events CommonJS module
  *  a multicast delegate implementation inspired by .NET events
  *  (c) 2015-2016 Fat Cerberus
 **/
 
+'use strict';
 module.exports =
 {
     Delegate: Delegate,

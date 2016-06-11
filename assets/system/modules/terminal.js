@@ -8,7 +8,6 @@
 module.exports =
 {
 	isOpen:     isOpen,
-	append:     append,
 	close:      close,
 	open:       open,
 	print:      print,
@@ -103,9 +102,9 @@ function executeCommand(command)
 		.filterBy('entity', entity)
 		.each(function(desc)
 	{
-		threads.createEx(desc, {
+		threads.create({
 			update: function() {
-				this.method.apply(this.that, tokens.slice(2));
+				desc.method.apply(desc.that, tokens.slice(2));
 			}
 		});
 	});
@@ -210,21 +209,6 @@ function isOpen()
 	return visible.yes;
 }
 
-// terminal.append()
-// append additional output text to the last line in the terminal.
-// arguments:
-//     text: the text to append.
-function append(text)
-{
-	if (nextLine == 0) {
-		print(text);
-		return;
-	}
-	var lineInBuffer = (nextLine - 1) % bufferSize;
-	buffer[lineInBuffer] += " >>" + text;
-	visible.line = 0.0;
-}
-
 // terminal.close()
 // close the console, hiding it from view.
 function close()
@@ -237,16 +221,16 @@ function close()
 
 // terminal.print()
 // print a line of text to the terminal.
-function print(text)
+function print(/*...*/)
 {
-	if (nextLine > 0) {
-		var lineText = buffer[(nextLine - 1) % bufferSize];
-		console.log(lineText.substr(1));
-	}
 	var lineInBuffer = nextLine % bufferSize;
-	buffer[lineInBuffer] = ">" + text;
+	buffer[lineInBuffer] = ">" + arguments[0];
+	for (var i = 1; i < arguments.length; ++i) {
+		buffer[lineInBuffer] += " >>" + arguments[1];
+	}
 	++nextLine;
 	visible.line = 0.0;
+	console.log(buffer[lineInBuffer]);
 }
 
 // terminal.open()

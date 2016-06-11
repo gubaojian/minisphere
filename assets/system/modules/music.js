@@ -1,5 +1,5 @@
 /**
- *  miniRT/music CommonJS module
+ *  miniRT music CommonJS module
  *  a stack-based solution for managing background music
  *  (c) 2015-2016 Fat Cerberus
 **/

@@ -6,375 +6,358 @@
  *  based on the Scenario cutscene engine originally written for Sphere 1.5
 **/
 
+'use strict';
+module.exports =
+{
+	defScenelet: defScenelet,
+	Scene:       Scene
+};
+
 const link    = require('link');
 const prim    = require('prim');
 const threads = require('threads');
 
 var screenMask = new Color(0, 0, 0, 0);
+var priority = 99;
+var threadID = threads.create({
+	update: _updateScenes,
+	render: _renderScenes,
+}, priority);
 
-var scenes =
-module.exports = (function()
+// scenes.defScenelet()
+// register a new scenelet.
+// arguments:
+//     name: the name of the scenelet.  this should be a valid JavaScript identifier (alphanumeric, no spaces).
+//     def:  an object defining the scenelet callbacks:
+//           .start(scene, ...): called when the command begins executing to initialize the state, or for
+//                               instantaneous commands, perform the necessary action.
+//           .update(scene):     optional.  a function to be called once per frame to update state data.  if not
+//                               provided, scenes immediately moves on to the next command after calling start().
+//                               this function should return true to keep the operation running, or false to
+//                               terminate it.
+//           .getInput(scene):   optional.  a function to be called once per frame to check for player input and
+//                               update state data accordingly.
+//           .render(scene):     optional.  a function to be called once per frame to perform any rendering
+//                               related to the command (e.g. text boxes).
+//           .finish(scene):     optional.  called after command execution ends, just before Scenes executes
+//                               the next instruction in the queue.
+function defScenelet(name, def)
 {
-	renderScenes = function()
+	if (name in Scene.prototype)
+		throw new Error("scenelet ID `" + name + "` already in use");
+	Scene.prototype[name] = function() {
+		this.enqueue({
+			arguments: arguments,
+			start: def.start,
+			getInput: def.getInput,
+			update: def.update,
+			render: def.render,
+			finish: def.finish
+		});
+		return this;
+	};
+};
+
+// scenes.Scene()
+// construct a scene definition.
+function Scene()
+{
+	var activation = null;
+	var forkedQueues = [];
+	var jumpsToFix = [];
+	var mainThread = 0;
+	var openBlockTypes = [];
+	var queueToFill = [];
+	var tasks = [];
+
+	var goTo = function(address)
 	{
-		if (screenMask.a > 0) {
-			prim.rect(screen, 0, 0, screen.width, screen.height, screenMask);
-		}
+		activation.pc = address;
 	};
 
-	var updateScenes = function()
+	function runTimeline(ctx)
 	{
-		return true;
-	};
-
-	var priority = 99;
-	var threadID = threads.create({
-		update: updateScenes,
-		render: renderScenes,
-	}, priority);
-
-	// scenelet()
-	// register a new scenelet.
-	// arguments:
-	//     name: the name of the scenelet.  this should be a valid JavaScript identifier (alphanumeric, no spaces).
-	//     def:  an object defining the scenelet callbacks:
-	//           .start(scene, ...): called when the command begins executing to initialize the state, or for
-	//                               instantaneous commands, perform the necessary action.
-	//           .update(scene):     optional.  a function to be called once per frame to update state data.  if not
-	//                               provided, scenes immediately moves on to the next command after calling start().
-	//                               this function should return true to keep the operation running, or false to
-	//                               terminate it.
-	//           .getInput(scene):   optional.  a function to be called once per frame to check for player input and
-	//                               update state data accordingly.
-	//           .render(scene):     optional.  a function to be called once per frame to perform any rendering
-	//                               related to the command (e.g. text boxes).
-	//           .finish(scene):     optional.  called after command execution ends, just before Scenes executes
-	//                               the next instruction in the queue.
-	// remarks:
-	//    it is safe to call this prior to initialization.
-	var scenelet = function(name, def)
-	{
-		if (name in Scene.prototype)
-			throw new Error("scenelet ID `" + name + "` already in use");
-		Scene.prototype[name] = function() {
-			this.enqueue({
-				arguments: arguments,
-				start: def.start,
-				getInput: def.getInput,
-				update: def.update,
-				render: def.render,
-				finish: def.finish
-			});
-			return this;
-		};
-	};
-	
-	// Scene()
-	// construct a scene definition.
-	function Scene()
-	{
-		var activation = null;
-		var forkedQueues = [];
-		var jumpsToFix = [];
-		var mainThread = 0;
-		var openBlockTypes = [];
-		var queueToFill = [];
-		var tasks = [];
-
-		var goTo = function(address)
-		{
-			activation.pc = address;
-		};
-
-		function runTimeline(ctx)
-		{
-			if ('opThread' in ctx) {
-				if (threads.isRunning(ctx.opThread))
-					return true;
-				else {
-					link(tasks)
-						.where(function(thread) { return ctx.opThread == thread })
-						.remove();
-					delete ctx.opThread;
-					activation = ctx;
-					if (typeof ctx.op.finish === 'function')
-						ctx.op.finish.call(ctx.opctx, this);
-					activation = null;
-				}
-			}
-			if (ctx.pc < ctx.instructions.length) {
-				ctx.op = ctx.instructions[ctx.pc++];
-				ctx.opctx = {};
-				if (typeof ctx.op.start === 'function') {
-					var arglist = [ this ];
-					for (i = 0; i < ctx.op.arguments.length; ++i)
-						arglist.push(ctx.op.arguments[i]);
-					activation = ctx;
-					ctx.op.start.apply(ctx.opctx, arglist);
-					activation = null;
-				}
-				if (ctx.op.update != null) {
-					ctx.opThread = threads.createEx(ctx.opctx, {
-						update: ctx.op.update.bind(ctx.opctx, this),
-						render: typeof ctx.op.render === 'function' ? ctx.op.render.bind(ctx.opctx, this) : undefined,
-						getInput: typeof ctx.op.getInput  === 'function' ? ctx.op.getInput.bind(ctx.opctx, this) : undefined,
-						priority: priority,
-					});
-					tasks.push(ctx.opThread);
-				} else {
-					ctx.opThread = 0;
-				}
+		if ('opThread' in ctx) {
+			if (threads.isRunning(ctx.opThread))
 				return true;
-			} else {
-				if (link(ctx.forks)
-					.where(function(thread) { return threads.isRunning(thread); })
-					.length() == 0)
-				{
-					var self = threads.self();
-					link(tasks)
-						.where(function(thread) { return self == thread })
-						.remove();
-					return false;
-				} else {
-					return true;
-				}
+			else {
+				link(tasks)
+					.where(function(thread) { return ctx.opThread == thread })
+					.remove();
+				delete ctx.opThread;
+				activation = ctx;
+				if (typeof ctx.op.finish === 'function')
+					ctx.op.finish.call(ctx.opctx, this);
+				activation = null;
 			}
-		};
-
-        // Scene:isRunning()
-		// determines whether a scene is currently playing.
-		// Returns:
-		//     true if the scene is still executing commands; false otherwise.
-		function isRunning()
-		{
-			return threads.isRunning(mainThread);
-		};
-
-		// Scene:doIf()
-		// during scene execution, execute a block of commands only if a specified condition is met.
-		// arguments:
-		//     conditional: a function to be called during scene execution to determine whether to run the following
-		//                  block.  the function should return true to execute the block, or false to skip it.  it
-		//                  will be called with 'this' set to the invoking scene.
-		function doIf(conditional)
-		{
-			var jump = { ifFalse: null };
-			jumpsToFix.push(jump);
-			var command = {
-				arguments: [],
-				start: function(scene) {
-					if (!conditional.call(scene)) {
-						goTo(jump.ifFalse);
-					}
-				}
-			};
-			enqueue(command);
-			openBlockTypes.push('branch');
-			return this;
-		};
-
-		// Scene:doWhile()
-		// During scene execution, repeats a block of commands for as long as a specified condition is met.
-		// Arguments:
-		//     conditional: A function to be called at each iteration to determine whether to continue the
-		//                  loop. The function should return true to continue the loop, or false to
-		//                  stop it. It will be called with 'this' set to the invoking Scene object.
-		function doWhile(conditional)
-		{
-			var jump = { loopStart: queueToFill.length, ifDone: null };
-			jumpsToFix.push(jump);
-			var command = {
-				arguments: [],
-				start: function(scene) {
-					if (!conditional.call(scene)) {
-						goTo(jump.ifDone);
-					}
-				}
-			};
-			enqueue(command);
-			openBlockTypes.push('loop');
-			return this;
-		};
-
-		// Scene:end()
-		// marks the end of a block of commands.
-		function end()
-		{
-			if (openBlockTypes.length == 0)
-				throw new Error("Mismatched end() in scene definition");
-			var blockType = openBlockTypes.pop();
-			switch (blockType) {
-				case 'fork':
-					var command = {
-						arguments: [ queueToFill ],
-						start: function(scene, instructions) {
-							var ctx = {
-								instructions: instructions,
-								pc: 0,
-								forks: [],
-							};
-							var tid = threads.createEx(scene, {
-								update: runTimeline.bind(scene, ctx)
-							});
-							tasks.push(tid);
-							activation.forks.push(tid);
-						}
-					};
-					queueToFill = forkedQueues.pop();
-					enqueue(command);
-					break;
-				case 'branch':
-					var jump = jumpsToFix.pop();
-					jump.ifFalse = queueToFill.length;
-					break;
-				case 'loop':
-					var command = {
-						arguments: [],
-						start: function(scene) {
-							goTo(jump.loopStart);
-						}
-					};
-					enqueue(command);
-					var jump = jumpsToFix.pop();
-					jump.ifDone = queueToFill.length;
-					break;
-				default:
-					throw new Error("Scenario internal error (unknown block type)");
-					break;
-			}
-			return this;
-		};
-
-		// Scene:enqueue()
-		// enqueues a custom scenelet.  not recommended for outside use.
-		function enqueue(command)
-		{
-			if (isRunning())
-				throw new Error("cannot modify scene definition during playback");
-			queueToFill.push(command);
-		};
-
-		// Scene:fork()
-		// during scene execution, fork the timeline, allowing a block to run simultaneously with
-		// the instructions after it.
-		function fork()
-		{
-			forkedQueues.push(queueToFill);
-			queueToFill = [];
-			openBlockTypes.push('fork');
-			return this;
-		};
-
-		// Scene:restart()
-		// restart the scene from the beginning.  this has the same effect as calling
-		// .stop() and .play() back-to-back.
-		function restart()
-		{
-			stop();
-			run();
-		};
-
-		// Scene:resync()
-		// during a scene, suspend the current timeline until all of its forks have run to
-		// completion.
-		// remarks:
-		//     there is an implicit resync at the end of a timeline.
-		function resync()
-		{
-			var command = {
-				arguments: [],
-				start: function(scene) {
-					forks = activation.forks;
-				},
-				update: function(scene) {
-					return link(forks)
-						.where(function(tid) { return threads.isRunning(tid); })
-						.length() > 0;
-				}
-			};
-			enqueue(command);
-			return this;
 		}
-
-		// Scene:run()
-		// play back the scene.
-		// arguments:
-		//     waitUntilDone: if true, block until playback has finished.
-		function run(waitUntilDone)
-		{
-			if (openBlockTypes.length > 0)
-				throw new Error("unclosed block in scene definition");
-			if (isRunning()) return;
-			var ctx = {
-				instructions: queueToFill,
-				pc: 0,
-				forks: [],
-			};
-			mainThread = threads.createEx(this, {
-				update: runTimeline.bind(this, ctx)
-			});
-			tasks.push(mainThread);
-			if (waitUntilDone)
-				threads.join(mainThread);
-			return this;
-		};
-
-		// Scene:stop()
-		// immediately halt scene playback.  no effect if the scene isn't playing.
-		// remarks:
-		//     after calling this method, calling .play() afterwards will start from the
-		//     beginning.
-		function stop()
-		{
-			link(tasks)
-				.each(function(tid)
+		if (ctx.pc < ctx.instructions.length) {
+			ctx.op = ctx.instructions[ctx.pc++];
+			ctx.opctx = {};
+			if (typeof ctx.op.start === 'function') {
+				var arglist = [ this ];
+				for (var i = 0; i < ctx.op.arguments.length; ++i)
+					arglist.push(ctx.op.arguments[i]);
+				activation = ctx;
+				ctx.op.start.apply(ctx.opctx, arglist);
+				activation = null;
+			}
+			if (ctx.op.update != null) {
+				ctx.opThread = threads.create({
+					update: ctx.op.update.bind(ctx.opctx, this),
+					render: typeof ctx.op.render === 'function' ? ctx.op.render.bind(ctx.opctx, this) : undefined,
+					getInput: typeof ctx.op.getInput  === 'function' ? ctx.op.getInput.bind(ctx.opctx, this) : undefined,
+					priority: priority,
+				});
+				tasks.push(ctx.opThread);
+			} else {
+				ctx.opThread = 0;
+			}
+			return true;
+		} else {
+			if (link(ctx.forks)
+				.where(function(thread) { return threads.isRunning(thread); })
+				.length() == 0)
 			{
-				threads.kill(tid);
-			});
-		};
+				var self = threads.self();
+				link(tasks)
+					.where(function(thread) { return self == thread })
+					.remove();
+				return false;
+			} else {
+				return true;
+			}
+		}
+	};
 
-		var retobj = {
-			isRunning: isRunning,
-			doIf:      doIf,
-			doWhile:   doWhile,
-			end:       end,
-			enqueue:   enqueue,
-			fork:      fork,
-			restart:   restart,
-			resync:    resync,
-			run:       run,
-			stop:      stop,
+	// Scene:isRunning()
+	// determines whether a scene is currently playing.
+	// Returns:
+	//     true if the scene is still executing commands; false otherwise.
+	function isRunning()
+	{
+		return threads.isRunning(mainThread);
+	};
+
+	// Scene:doIf()
+	// during scene execution, execute a block of commands only if a specified condition is met.
+	// arguments:
+	//     conditional: a function to be called during scene execution to determine whether to run the following
+	//                  block.  the function should return true to execute the block, or false to skip it.  it
+	//                  will be called with 'this' set to the invoking scene.
+	function doIf(conditional)
+	{
+		var jump = { ifFalse: null };
+		jumpsToFix.push(jump);
+		var command = {
+			arguments: [],
+			start: function(scene) {
+				if (!conditional.call(scene)) {
+					goTo(jump.ifFalse);
+				}
+			}
 		};
-		Object.setPrototypeOf(retobj, Scene.prototype);
-		return retobj;
+		enqueue(command);
+		openBlockTypes.push('branch');
+		return this;
+	};
+
+	// Scene:doWhile()
+	// During scene execution, repeats a block of commands for as long as a specified condition is met.
+	// Arguments:
+	//     conditional: A function to be called at each iteration to determine whether to continue the
+	//                  loop. The function should return true to continue the loop, or false to
+	//                  stop it. It will be called with 'this' set to the invoking Scene object.
+	function doWhile(conditional)
+	{
+		var jump = { loopStart: queueToFill.length, ifDone: null };
+		jumpsToFix.push(jump);
+		var command = {
+			arguments: [],
+			start: function(scene) {
+				if (!conditional.call(scene)) {
+					goTo(jump.ifDone);
+				}
+			}
+		};
+		enqueue(command);
+		openBlockTypes.push('loop');
+		return this;
+	};
+
+	// Scene:end()
+	// marks the end of a block of commands.
+	function end()
+	{
+		if (openBlockTypes.length == 0)
+			throw new Error("Mismatched end() in scene definition");
+		var blockType = openBlockTypes.pop();
+		switch (blockType) {
+			case 'fork':
+				var command = {
+					arguments: [ queueToFill ],
+					start: function(scene, instructions) {
+						var ctx = {
+							instructions: instructions,
+							pc: 0,
+							forks: [],
+						};
+						var tid = threads.create({
+							update: runTimeline.bind(scene, ctx)
+						});
+						tasks.push(tid);
+						activation.forks.push(tid);
+					}
+				};
+				queueToFill = forkedQueues.pop();
+				enqueue(command);
+				break;
+			case 'branch':
+				var jump = jumpsToFix.pop();
+				jump.ifFalse = queueToFill.length;
+				break;
+			case 'loop':
+				var command = {
+					arguments: [],
+					start: function(scene) {
+						goTo(jump.loopStart);
+					}
+				};
+				enqueue(command);
+				var jump = jumpsToFix.pop();
+				jump.ifDone = queueToFill.length;
+				break;
+			default:
+				throw new Error("Scenario internal error (unknown block type)");
+				break;
+		}
+		return this;
+	};
+
+	// Scene:enqueue()
+	// enqueues a custom scenelet.  not recommended for outside use.
+	function enqueue(command)
+	{
+		if (isRunning())
+			throw new Error("cannot modify scene definition during playback");
+		queueToFill.push(command);
+	};
+
+	// Scene:fork()
+	// during scene execution, fork the timeline, allowing a block to run simultaneously with
+	// the instructions after it.
+	function fork()
+	{
+		forkedQueues.push(queueToFill);
+		queueToFill = [];
+		openBlockTypes.push('fork');
+		return this;
+	};
+
+	// Scene:restart()
+	// restart the scene from the beginning.  this has the same effect as calling
+	// .stop() and .play() back-to-back.
+	function restart()
+	{
+		stop();
+		run();
+	};
+
+	// Scene:resync()
+	// during a scene, suspend the current timeline until all of its forks have run to
+	// completion.
+	// remarks:
+	//     there is an implicit resync at the end of a timeline.
+	function resync()
+	{
+		var command = {
+			arguments: [],
+			start: function(scene) {
+				forks = activation.forks;
+			},
+			update: function(scene) {
+				return link(forks)
+					.where(function(tid) { return threads.isRunning(tid); })
+					.length() > 0;
+			}
+		};
+		enqueue(command);
+		return this;
 	}
 
-	return {
-		scenelet: scenelet,
-		Scene:    Scene,
+	// Scene:run()
+	// play back the scene.
+	// arguments:
+	//     waitUntilDone: if true, block until playback has finished.
+	function run(waitUntilDone)
+	{
+		if (openBlockTypes.length > 0)
+			throw new Error("unclosed block in scene definition");
+		if (isRunning()) return;
+		var ctx = {
+			instructions: queueToFill,
+			pc: 0,
+			forks: [],
+		};
+		mainThread = threads.create({
+			update: runTimeline.bind(this, ctx)
+		});
+		tasks.push(mainThread);
+		if (waitUntilDone)
+			threads.join(mainThread);
+		return this;
 	};
-})();
 
-// .call() scenelet
-// Calls a function during scene execution.
-// Arguments:
-//     method: The function to be called.
-// Remarks:
-//     Any additional arguments provided beyond the 'method' argument will be passed
-//     to the specified function when it is called.
-scenes.scenelet('call',
+	// Scene:stop()
+	// immediately halt scene playback.  no effect if the scene isn't playing.
+	// remarks:
+	//     after calling this method, calling .play() afterwards will start from the
+	//     beginning.
+	function stop()
+	{
+		link(tasks)
+			.each(function(tid)
+		{
+			threads.kill(tid);
+		});
+	};
+
+	var retobj = {
+		isRunning: isRunning,
+		doIf:      doIf,
+		doWhile:   doWhile,
+		end:       end,
+		enqueue:   enqueue,
+		fork:      fork,
+		restart:   restart,
+		resync:    resync,
+		run:       run,
+		stop:      stop,
+	};
+	Object.setPrototypeOf(retobj, Scene.prototype);
+	return retobj;
+}
+
+function _renderScenes()
+{
+	if (screenMask.a > 0) {
+		prim.fill(screen, screenMask);
+	}
+};
+
+function _updateScenes()
+{
+	return true;
+};
+
+defScenelet('call',
 {
 	start: function(scene, method /*...*/) {
 		method.apply(null, [].slice.call(arguments, 2));
 	}
 });
 
-// .fadeTo() scenelet
-// Fades the screen mask to a specified color.
-// Arguments:
-//     color:    The new screen mask color.
-//     duration: The length of the fading operation, in seconds.
-scenes.scenelet('fadeTo',
+defScenelet('fadeTo',
 {
 	start: function(scene, color, duration) {
 		duration = duration !== undefined ? duration : 0.25;
@@ -388,13 +371,7 @@ scenes.scenelet('fadeTo',
 	}
 });
 
-// .marquee() scenelet
-// Shows a scrolling marquee with the specified text. Useful for announcing boss battles.
-// Arguments:
-//     text:            The text to display.
-//     backgroundColor: The background color of the marquee.
-//     color:           The text color.
-scenes.scenelet('marquee',
+defScenelet('marquee',
 {
 	start: function(scene, text, backgroundColor, color) {
 		if (backgroundColor === undefined) { backgroundColor = new Color(0, 0, 0, 255); }
@@ -430,11 +407,7 @@ scenes.scenelet('marquee',
 	}
 });
 
-// .pause() scenelet
-// Delays execution of the current timeline for a specified amount of time.
-// Arguments:
-//     duration: The length of the delay, in seconds.
-scenes.scenelet('pause',
+defScenelet('pause',
 {
 	start: function(scene, duration) {
 		this.duration = duration;
@@ -446,10 +419,7 @@ scenes.scenelet('pause',
 	}
 });
 
-// .playSound() scenelet
-// Plays a sound from a file.
-//     fileName: The name of the file to play.
-scenes.scenelet('playSound',
+defScenelet('playSound',
 {
 	start: function(scene, fileName) {
 		this.sound = new Sound(fileName);
@@ -461,14 +431,7 @@ scenes.scenelet('playSound',
 	}
 });
 
-// .tween() scenelet
-// Smoothly adjusts numeric properties of an object over a period of time.
-// Arguments:
-//    object:     The object containing the properties to be tweened.
-//    duration:   The length of the tweening operation, in seconds.
-//    easingType: The name of the easing function to use, e.g. 'linear' or 'easeOutQuad'.
-//    endValues:  An object specifying the properties to tween and their final values.
-scenes.scenelet('tween',
+defScenelet('tween',
 {
 	start: function(scene, object, duration, easingType, endValues) {
 		this.easers = {

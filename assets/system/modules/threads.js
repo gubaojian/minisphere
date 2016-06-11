@@ -4,16 +4,14 @@
  *  (c) 2015-2016 Fat Cerberus
 **/
 
+'use strict';
 module.exports =
 {
 	create:    create,
-	createEx:  createEx,
 	isRunning: isRunning,
 	join:      join,
 	kill:      kill,
-	renderAll: renderAll,
 	self:      self,
-	updateAll: updateAll
 };
 
 const link = require('link');
@@ -40,32 +38,77 @@ function create(entity, priority)
 	var update = entity.update;
 	var render = (typeof entity.render === 'function') ? entity.render : undefined;
 	var getInput = (typeof entity.getInput === 'function') ? entity.getInput : null;
-	return createEx(entity, {
+	return _makeThread(entity, {
 		priority: priority,
 		update: entity.update,
 		render: entity.render,
 		getInput: entity.getInput,
 	});
+}
+
+// threads.isRunning()
+// determine whether a thread is still running.
+// arguments:
+//     threadID: the ID of the thread to check.
+function isRunning(threadID)
+{
+	if (threadID == 0) return false;
+	for (var i = 0; i < threads.length; ++i) {
+		if (threads[i].id == threadID) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// threads.join()
+// Blocks the calling thread until one or more other threads have terminated.
+// arguments:
+//     threadID: either a single thread ID or an array of them.  any invalid thread
+//               ID will cause an error to be thrown.
+function join(threadIDs)
+{
+	threadIDs = threadIDs instanceof Array ? threadIDs : [ threadIDs ];
+	while (link(threads)
+		.filterBy('id', threadIDs)
+		.length() > 0)
+	{
+		_renderAll();
+		screen.flip();
+		_updateAll();
+	}
+}
+
+// threads.kill()
+// forcibly terminate a thread.
+// arguments:
+//     threadID: the ID of the thread to terminate.
+function kill(threadID)
+{
+	link(threads)
+		.where(function(thread) { return thread.id == threadID })
+		.execute(function(thread) { thread.isValid = false; })
+		.remove();
+}
+
+// threads.self()
+// get the currently executing thread's thread ID.
+// Remarks:
+//     if this function is used outside of a thread update, render or input
+//     handling call, it will return 0 (the ID of the main thread).
+function self()
+{
+	return currentSelf;
+}
+
+function _compare(a, b) {
+	return a.priority != b.priority ?
+		a.priority - b.priority :
+		a.id - b.id;
 };
 
-// threads.createEx()
-// create a thread with advanced options.
-// arguments:
-//     that:       the object to bind as 'this' to thread callbacks.  may be null.
-//     threadDesc: an object describing the thread.  this should contain the following members:
-//                     update:   the update function for the new thread.
-//                     render:   optional.  the render function for the new thread.
-//                     getInput: optional.  the input handler for the new thread.
-//                     priority: optional.  the render priority for the new thread.  higher-priority threads
-//                               are rendered later in a frame than lower-priority ones.  ignored if no
-//                               renderer is provided. (default: 0)
-// remarks:
-//     this is for advanced thread creation.  for typical use, it is recommended to use
-//     threads.create() instead.
-function createEx(that, threadDesc)
+function _makeThread(that, threadDesc)
 {
-	assert(arguments.length >= 2, "threads.createEx() expects 2 arguments");
-
 	var update = threadDesc.update.bind(that);
 	var render = typeof threadDesc.render === 'function'
 		? threadDesc.render.bind(that) : undefined;
@@ -84,55 +127,9 @@ function createEx(that, threadDesc)
 	};
 	threads.push(newThread);
 	return newThread.id;
-};
+}
 
-// threads.isRunning()
-// determine whether a thread is still running.
-// arguments:
-//     threadID: the ID of the thread to check.
-function isRunning(threadID)
-{
-	if (threadID == 0) return false;
-	for (var i = 0; i < threads.length; ++i) {
-		if (threads[i].id == threadID) {
-			return true;
-		}
-	}
-	return false;
-};
-
-// threads.join()
-// Blocks the calling thread until one or more other threads have terminated.
-// arguments:
-//     threadID: either a single thread ID or an array of them.  any invalid thread
-//               ID will cause an error to be thrown.
-function join(threadIDs)
-{
-	threadIDs = threadIDs instanceof Array ? threadIDs : [ threadIDs ];
-	while (link(threads)
-		.filterBy('id', threadIDs)
-		.length() > 0)
-	{
-		renderAll();
-		screen.flip();
-		updateAll();
-	}
-};
-
-// threads.kill()
-// forcibly terminate a thread.
-// arguments:
-//     threadID: the ID of the thread to terminate.
-function kill(threadID)
-{
-	link(threads)
-		.where(function(thread) { return thread.id == threadID })
-		.execute(function(thread) { thread.isValid = false; })
-		.remove();
-};
-// threads.renderAll()
-// Renders the current frame by calling all active threads' renderers.
-function renderAll()
+function _renderAll()
 {
 	link(link(threads).sort(_compare))
 		.where(function(thread) { return thread.isValid; })
@@ -140,22 +137,10 @@ function renderAll()
 		.each(function(thread)
 	{
 		thread.renderer();
-	}.bind(this));
-};
+	});
+}
 
-// threads.self()
-// get the currently executing thread's thread ID.
-// Remarks:
-//     if this function is used outside of a thread update, render or input
-//     handling call, it will return 0 (the ID of the main thread).
-function self()
-{
-	return currentSelf;
-};
-
-// threads.updateAll()
-// update all active threads for the next frame.
-function updateAll(threadID)
+function _updateAll()
 {
 	var threadsEnding = [];
 	link(link(threads).toArray())
@@ -171,8 +156,9 @@ function updateAll(threadID)
 			thread.inputHandler();
 		currentSelf = lastSelf;
 		thread.isBusy = false;
-		if (!isRunning) threadsEnding.push(thread.id);
-	}.bind(this));
+		if (!isRunning)
+			threadsEnding.push(thread.id);
+	});
 	link(threadsEnding)
 		.each(function(threadID)
 	{
@@ -180,9 +166,3 @@ function updateAll(threadID)
 	});
 	hasUpdated = true;
 }
-
-function _compare(a, b) {
-	return a.priority != b.priority ?
-		a.priority - b.priority :
-		a.id - b.id;
-};
