@@ -8,6 +8,7 @@ module.exports =
     blit:        blit,
     circle:      circle,
     ellipse:     ellipse,
+    fill:        fill,
     line:        line,
     lineCircle:  lineCircle,
     lineEllipse: lineEllipse,
@@ -128,17 +129,40 @@ function lineEllipse(surface, x, y, rx, ry, color)
 	shape.draw(surface);
 }
 
-function lineRect(surface, x, y, width, height, color)
+function lineRect(surface, x, y, width, height, color, thickness)
 {
+	if (thickness === undefined)
+		thickness = 1.0;
+
 	var x1 = (x >> 0) + 0.5;
 	var y1 = (y >> 0) + 0.5;
-	var x2 = x1 + (width >> 0);
-	var y2 = y1 + (height >> 0);
-
-	line(surface, x1, y1, x2, y1, 1, color);
-	line(surface, x2, y1, x2, y2, 1, color);
-	line(surface, x1, y2, x2, y2, 1, color);
-	line(surface, x1, y1, x1, y2, 1, color);
+	var x2 = x1 + (width >> 0) - 1;
+	var y2 = y1 + (height >> 0) - 1;
+	var shape;
+	if (thickness <= 0.0) {
+		shape = new Shape([
+			{ x: x1, y: y1, color: color },
+			{ x: x2, y: y1, color: color },
+			{ x: x2, y: y2, color: color },
+			{ x: x1, y: y2, color: color },
+		], null, ShapeType.LineLoop);
+	}
+	else {
+		var t = 0.5 * thickness;
+		shape = new Shape([
+			{ x: x1 - t, y: y1 - t, color: color },
+			{ x: x1 + t, y: y1 + t, color: color },
+			{ x: x2 + t, y: y1 - t, color: color },
+			{ x: x2 - t, y: y1 + t, color: color },
+			{ x: x2 + t, y: y2 + t, color: color },
+			{ x: x2 - t, y: y2 - t, color: color },
+			{ x: x1 - t, y: y2 + t, color: color },
+			{ x: x1 + t, y: y2 - t, color: color },
+			{ x: x1 - t, y: y1 - t, color: color },
+			{ x: x1 + t, y: y1 + t, color: color },
+		], null, ShapeType.TriStrip);
+	}
+	shape.draw(surface);
 }
 
 function point(surface, x, y, color)
