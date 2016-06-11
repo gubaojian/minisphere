@@ -385,7 +385,7 @@ xcopy /y /d /e /f "..\docs\*-api.txt" "$(OutDir)documentation\"</Command>
     <ClCompile Include="..\src\engine\galileo.c" />
     <ClCompile Include="..\src\engine\geometry.c" />
     <ClCompile Include="..\src\engine\image.c" />
-    <ClCompile Include="..\src\engine\input.c" />
+    <ClCompile Include="..\src\engine\keyboard.c" />
     <ClCompile Include="..\src\engine\rng.c" />
     <ClCompile Include="..\src\engine\script.c" />
     <ClCompile Include="..\src\engine\shader.c" />
@@ -419,7 +419,7 @@ xcopy /y /d /e /f "..\docs\*-api.txt" "$(OutDir)documentation\"</Command>
     <ClInclude Include="..\src\engine\font.h" />
     <ClInclude Include="..\src\engine\geometry.h" />
     <ClInclude Include="..\src\engine\image.h" />
-    <ClInclude Include="..\src\engine\input.h" />
+    <ClInclude Include="..\src\engine\keyboard.h" />
     <ClInclude Include="..\src\engine\galileo.h" />
     <ClInclude Include="..\src\engine\rng.h" />
     <ClInclude Include="..\src\engine\script.h" />

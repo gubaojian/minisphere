@@ -7,7 +7,7 @@
 #include "commonjs.h"
 #include "debugger.h"
 #include "galileo.h"
-#include "input.h"
+#include "keyboard.h"
 #include "rng.h"
 #include "sockets.h"
 
@@ -301,7 +301,7 @@ do_events(void)
 #endif
 
 	update_async();
-	update_input();
+	update_keyboard();
 	update_audio();
 
 	// process Allegro events
@@ -364,7 +364,7 @@ initialize_engine(void)
 	initialize_async();
 	initialize_galileo();
 	initialize_audio();
-	initialize_input();
+	initialize_keyboard();
 	initialize_sockets();
 	initialize_scripts();
 
@@ -384,7 +384,7 @@ shutdown_engine(void)
 	shutdown_debugger();
 #endif
 
-	shutdown_input();
+	shutdown_keyboard();
 	shutdown_scripts();
 	shutdown_sockets();
 

@@ -112,48 +112,45 @@ function executeCommand(command)
 
 function getInput()
 {
-	var consoleKey = GetPlayerKey(PLAYER_1, PLAYER_KEY_MENU);
-	if (!wasKeyDown && IsKeyPressed(consoleKey)) {
+	if (!wasKeyDown && keys.isDown(Key.Tab)) {
 		if (!isOpen())
 			open();
 		else
 			close();
 	}
-	wasKeyDown = IsKeyPressed(consoleKey);
+	wasKeyDown = keys.isDown(Key.Tab);
 	if (isOpen()) {
-		var wheelKey = GetNumMouseWheelEvents() > 0 ? GetMouseWheelEvent() : null;
-		var speed = wheelKey != null ? 1.0 : 0.5;
-		if (IsKeyPressed(KEY_PAGEUP) || wheelKey == MOUSE_WHEEL_UP) {
-			visible.line = Math.min(visible.line + speed, buffer.length - numLines);
-		} else if (IsKeyPressed(KEY_PAGEDOWN) || wheelKey == MOUSE_WHEEL_DOWN) {
-			visible.line = Math.max(visible.line - speed, 0);
+		if (keys.isDown(Key.PageUp)) {
+			visible.line = Math.min(visible.line + 0.5, buffer.length - numLines);
+		} else if (keys.isDown(Key.PageDown)) {
+			visible.line = Math.max(visible.line - 0.5, 0);
 		}
-		var keycode = AreKeysLeft() ? GetKey() : null;
+		var keycode = keys.numKeys > 0 ? keys.read() : null;
 		switch (keycode) {
-			case KEY_ENTER:
+			case Key.Enter:
 				print("Command entered: '" + entry + "'");
 				executeCommand(entry);
 				entry = "";
 				break;
-			case KEY_BACKSPACE:
+			case Key.Backspace:
 				entry = entry.slice(0, -1);
 				break;
-			case KEY_HOME:
+			case Key.Home:
 				var newLine = buffer.length - numLines;
 				new scenes.Scene()
 					.tween(visible, 0.125, 'easeOut', { line: newLine })
 					.run();
 				break;
-			case KEY_END:
+			case Key.End:
 				new scenes.Scene()
 					.tween(visible, 0.125, 'easeOut', { line: 0.0 })
 					.run();
 				break;
-			case KEY_TAB: break;
+			case Key.Tab: break;
 			case null: break;
 			default:
-				var ch = GetKeyString(keycode, IsKeyPressed(KEY_SHIFT));
-				ch = GetToggleState(KEY_CAPSLOCK) ? ch.toUpperCase() : ch;
+				var ch = keys.charFromKey(keycode, keys.isDown(Key.LShift));
+				ch = keys.isToggled(Key.CapsLock) ? ch.toUpperCase() : ch;
 				entry += ch;
 		}
 	}

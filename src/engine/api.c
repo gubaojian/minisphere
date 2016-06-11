@@ -10,7 +10,7 @@
 #include "font.h"
 #include "galileo.h"
 #include "image.h"
-#include "input.h"
+#include "keyboard.h"
 #include "rng.h"
 #include "shader.h"
 #include "sockets.h"
@@ -41,6 +41,12 @@ static duk_ret_t js_fs_open                    (duk_context* ctx);
 static duk_ret_t js_fs_rename                  (duk_context* ctx);
 static duk_ret_t js_fs_rmdir                   (duk_context* ctx);
 static duk_ret_t js_fs_unlink                  (duk_context* ctx);
+static duk_ret_t js_keys_get_numKeys           (duk_context* ctx);
+static duk_ret_t js_keys_charFromKey           (duk_context* ctx);
+static duk_ret_t js_keys_clearQueue            (duk_context* ctx);
+static duk_ret_t js_keys_isDown                (duk_context* ctx);
+static duk_ret_t js_keys_isToggled             (duk_context* ctx);
+static duk_ret_t js_keys_read                  (duk_context* ctx);
 static duk_ret_t js_random_chance              (duk_context* ctx);
 static duk_ret_t js_random_normal              (duk_context* ctx);
 static duk_ret_t js_random_random              (duk_context* ctx);
@@ -301,6 +307,12 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(g_duk, "fs", "rename", js_fs_rename);
 	api_register_static_func(g_duk, "fs", "rmdir", js_fs_rmdir);
 	api_register_static_func(g_duk, "fs", "unlink", js_fs_unlink);
+	api_register_static_prop(g_duk, "keys", "numKeys", js_keys_get_numKeys, NULL);
+	api_register_static_func(g_duk, "keys", "isDown", js_keys_isDown);
+	api_register_static_func(g_duk, "keys", "isToggled", js_keys_isToggled);
+	api_register_static_func(g_duk, "keys", "charFromKey", js_keys_charFromKey);
+	api_register_static_func(g_duk, "keys", "clearQueue", js_keys_clearQueue);
+	api_register_static_func(g_duk, "keys", "read", js_keys_read);
 	api_register_static_func(g_duk, "random", "chance", js_random_chance);
 	api_register_static_func(g_duk, "random", "normal", js_random_normal);
 	api_register_static_func(g_duk, "random", "random", js_random_random);
@@ -315,6 +327,106 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(g_duk, "screen", "flip", js_screen_flip);
 	api_register_static_func(g_duk, "screen", "resize", js_screen_resize);
 
+	api_register_const(g_duk, "Key", "None", 0);
+	api_register_const(g_duk, "Key", "Alt", ALLEGRO_KEY_ALT);
+	api_register_const(g_duk, "Key", "AltGr", ALLEGRO_KEY_ALTGR);
+	api_register_const(g_duk, "Key", "Apostrophe", ALLEGRO_KEY_QUOTE);
+	api_register_const(g_duk, "Key", "Backslash", ALLEGRO_KEY_BACKSLASH);
+	api_register_const(g_duk, "Key", "Backspace", ALLEGRO_KEY_BACKSPACE);
+	api_register_const(g_duk, "Key", "CloseBrace", ALLEGRO_KEY_CLOSEBRACE);
+	api_register_const(g_duk, "Key", "CapsLock", ALLEGRO_KEY_CAPSLOCK);
+	api_register_const(g_duk, "Key", "Comma", ALLEGRO_KEY_COMMA);
+	api_register_const(g_duk, "Key", "LCtrl", ALLEGRO_KEY_LCTRL);
+	api_register_const(g_duk, "Key", "RCtrl", ALLEGRO_KEY_RCTRL);
+	api_register_const(g_duk, "Key", "Delete", ALLEGRO_KEY_DELETE);
+	api_register_const(g_duk, "Key", "Down", ALLEGRO_KEY_DOWN);
+	api_register_const(g_duk, "Key", "End", ALLEGRO_KEY_END);
+	api_register_const(g_duk, "Key", "Enter", ALLEGRO_KEY_ENTER);
+	api_register_const(g_duk, "Key", "Equals", ALLEGRO_KEY_EQUALS);
+	api_register_const(g_duk, "Key", "Escape", ALLEGRO_KEY_ESCAPE);
+	api_register_const(g_duk, "Key", "Home", ALLEGRO_KEY_HOME);
+	api_register_const(g_duk, "Key", "Hyphen", ALLEGRO_KEY_MINUS);
+	api_register_const(g_duk, "Key", "Insert", ALLEGRO_KEY_INSERT);
+	api_register_const(g_duk, "Key", "Left", ALLEGRO_KEY_LEFT);
+	api_register_const(g_duk, "Key", "NumLock", ALLEGRO_KEY_NUMLOCK);
+	api_register_const(g_duk, "Key", "OpenBrace", ALLEGRO_KEY_OPENBRACE);
+	api_register_const(g_duk, "Key", "PageDown", ALLEGRO_KEY_PGDN);
+	api_register_const(g_duk, "Key", "PageUp", ALLEGRO_KEY_PGUP);
+	api_register_const(g_duk, "Key", "Period", ALLEGRO_KEY_FULLSTOP);
+	api_register_const(g_duk, "Key", "Right", ALLEGRO_KEY_RIGHT);
+	api_register_const(g_duk, "Key", "ScrollLock", ALLEGRO_KEY_SCROLLLOCK);
+	api_register_const(g_duk, "Key", "Semicolon", ALLEGRO_KEY_SEMICOLON);
+	api_register_const(g_duk, "Key", "LShift", ALLEGRO_KEY_LSHIFT);
+	api_register_const(g_duk, "Key", "RShift", ALLEGRO_KEY_RSHIFT);
+	api_register_const(g_duk, "Key", "Slash", ALLEGRO_KEY_SLASH);
+	api_register_const(g_duk, "Key", "Space", ALLEGRO_KEY_SPACE);
+	api_register_const(g_duk, "Key", "Tab", ALLEGRO_KEY_TAB);
+	api_register_const(g_duk, "Key", "Tilde", ALLEGRO_KEY_TILDE);
+	api_register_const(g_duk, "Key", "Up", ALLEGRO_KEY_UP);
+	api_register_const(g_duk, "Key", "F1", ALLEGRO_KEY_F1);
+	api_register_const(g_duk, "Key", "F2", ALLEGRO_KEY_F2);
+	api_register_const(g_duk, "Key", "F3", ALLEGRO_KEY_F3);
+	api_register_const(g_duk, "Key", "F4", ALLEGRO_KEY_F4);
+	api_register_const(g_duk, "Key", "F5", ALLEGRO_KEY_F5);
+	api_register_const(g_duk, "Key", "F6", ALLEGRO_KEY_F6);
+	api_register_const(g_duk, "Key", "F7", ALLEGRO_KEY_F7);
+	api_register_const(g_duk, "Key", "F8", ALLEGRO_KEY_F8);
+	api_register_const(g_duk, "Key", "F9", ALLEGRO_KEY_F9);
+	api_register_const(g_duk, "Key", "F10", ALLEGRO_KEY_F10);
+	api_register_const(g_duk, "Key", "F11", ALLEGRO_KEY_F11);
+	api_register_const(g_duk, "Key", "F12", ALLEGRO_KEY_F12);
+	api_register_const(g_duk, "Key", "A", ALLEGRO_KEY_A);
+	api_register_const(g_duk, "Key", "B", ALLEGRO_KEY_B);
+	api_register_const(g_duk, "Key", "C", ALLEGRO_KEY_C);
+	api_register_const(g_duk, "Key", "D", ALLEGRO_KEY_D);
+	api_register_const(g_duk, "Key", "E", ALLEGRO_KEY_E);
+	api_register_const(g_duk, "Key", "F", ALLEGRO_KEY_F);
+	api_register_const(g_duk, "Key", "G", ALLEGRO_KEY_G);
+	api_register_const(g_duk, "Key", "H", ALLEGRO_KEY_H);
+	api_register_const(g_duk, "Key", "I", ALLEGRO_KEY_I);
+	api_register_const(g_duk, "Key", "J", ALLEGRO_KEY_J);
+	api_register_const(g_duk, "Key", "K", ALLEGRO_KEY_K);
+	api_register_const(g_duk, "Key", "L", ALLEGRO_KEY_L);
+	api_register_const(g_duk, "Key", "M", ALLEGRO_KEY_M);
+	api_register_const(g_duk, "Key", "N", ALLEGRO_KEY_N);
+	api_register_const(g_duk, "Key", "O", ALLEGRO_KEY_O);
+	api_register_const(g_duk, "Key", "P", ALLEGRO_KEY_P);
+	api_register_const(g_duk, "Key", "Q", ALLEGRO_KEY_Q);
+	api_register_const(g_duk, "Key", "R", ALLEGRO_KEY_R);
+	api_register_const(g_duk, "Key", "S", ALLEGRO_KEY_S);
+	api_register_const(g_duk, "Key", "T", ALLEGRO_KEY_T);
+	api_register_const(g_duk, "Key", "U", ALLEGRO_KEY_U);
+	api_register_const(g_duk, "Key", "V", ALLEGRO_KEY_V);
+	api_register_const(g_duk, "Key", "W", ALLEGRO_KEY_W);
+	api_register_const(g_duk, "Key", "X", ALLEGRO_KEY_X);
+	api_register_const(g_duk, "Key", "Y", ALLEGRO_KEY_Y);
+	api_register_const(g_duk, "Key", "Z", ALLEGRO_KEY_Z);
+	api_register_const(g_duk, "Key", "D1", ALLEGRO_KEY_1);
+	api_register_const(g_duk, "Key", "D2", ALLEGRO_KEY_2);
+	api_register_const(g_duk, "Key", "D3", ALLEGRO_KEY_3);
+	api_register_const(g_duk, "Key", "D4", ALLEGRO_KEY_4);
+	api_register_const(g_duk, "Key", "D5", ALLEGRO_KEY_5);
+	api_register_const(g_duk, "Key", "D6", ALLEGRO_KEY_6);
+	api_register_const(g_duk, "Key", "D7", ALLEGRO_KEY_7);
+	api_register_const(g_duk, "Key", "D8", ALLEGRO_KEY_8);
+	api_register_const(g_duk, "Key", "D9", ALLEGRO_KEY_9);
+	api_register_const(g_duk, "Key", "D0", ALLEGRO_KEY_0);
+	api_register_const(g_duk, "Key", "NumPad1", ALLEGRO_KEY_PAD_1);
+	api_register_const(g_duk, "Key", "NumPad2", ALLEGRO_KEY_PAD_2);
+	api_register_const(g_duk, "Key", "NumPad3", ALLEGRO_KEY_PAD_3);
+	api_register_const(g_duk, "Key", "NumPad4", ALLEGRO_KEY_PAD_4);
+	api_register_const(g_duk, "Key", "NumPad5", ALLEGRO_KEY_PAD_5);
+	api_register_const(g_duk, "Key", "NumPad6", ALLEGRO_KEY_PAD_6);
+	api_register_const(g_duk, "Key", "NumPad7", ALLEGRO_KEY_PAD_7);
+	api_register_const(g_duk, "Key", "NumPad8", ALLEGRO_KEY_PAD_8);
+	api_register_const(g_duk, "Key", "NumPad9", ALLEGRO_KEY_PAD_9);
+	api_register_const(g_duk, "Key", "NumPad0", ALLEGRO_KEY_PAD_0);
+	api_register_const(g_duk, "Key", "NumPadEnter", ALLEGRO_KEY_PAD_ENTER);
+	api_register_const(g_duk, "Key", "Add", ALLEGRO_KEY_PAD_PLUS);
+	api_register_const(g_duk, "Key", "Decimal", ALLEGRO_KEY_PAD_DELETE);
+	api_register_const(g_duk, "Key", "Divide", ALLEGRO_KEY_PAD_SLASH);
+	api_register_const(g_duk, "Key", "Multiply", ALLEGRO_KEY_PAD_ASTERISK);
+	api_register_const(g_duk, "Key", "Subtract", ALLEGRO_KEY_PAD_MINUS);
 	api_register_const(g_duk, "ShapeType", "Auto", SHAPE_AUTO);
 	api_register_const(g_duk, "ShapeType", "Fan", SHAPE_FAN);
 	api_register_const(g_duk, "ShapeType", "Lines", SHAPE_LINES);
@@ -328,7 +440,6 @@ initialize_api(duk_context* ctx)
 	init_color_api();
 	init_commonjs_api();
 	init_console_api();
-	init_input_api();
 }
 
 void
@@ -911,6 +1022,118 @@ js_fs_unlink(duk_context* ctx)
 	if (!sfs_unlink(g_fs, filename))
 		duk_error_ni(ctx, -1, DUK_ERR_ERROR, "unable to unlink `%s`", filename);
 	return 0;
+}
+
+static duk_ret_t
+js_keys_get_numKeys(duk_context* ctx)
+{
+	update_keyboard();
+	duk_push_int(ctx, get_num_keys());
+	return 1;
+}
+
+static duk_ret_t
+js_keys_isDown(duk_context* ctx)
+{
+	int keycode = duk_require_int(ctx, 0);
+
+	duk_push_boolean(ctx, is_key_down(keycode));
+	return 1;
+}
+
+static duk_ret_t
+js_keys_isToggled(duk_context* ctx)
+{
+	int keycode;
+
+	keycode = duk_require_int(ctx, 0);
+
+	if (keycode != ALLEGRO_KEY_CAPSLOCK
+		&& keycode != ALLEGRO_KEY_NUMLOCK
+		&& keycode != ALLEGRO_KEY_SCROLLLOCK)
+	{
+		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "invalid toggle key constant");
+	}
+
+	duk_push_boolean(ctx, is_key_toggled(keycode));
+	return 1;
+}
+
+static duk_ret_t
+js_keys_charFromKey(duk_context* ctx)
+{
+	int n_args = duk_get_top(ctx);
+	int keycode = duk_require_int(ctx, 0);
+	bool shift = n_args >= 2 ? duk_require_boolean(ctx, 1) : false;
+
+	switch (keycode) {
+	case ALLEGRO_KEY_A: duk_push_string(ctx, shift ? "A" : "a"); break;
+	case ALLEGRO_KEY_B: duk_push_string(ctx, shift ? "B" : "b"); break;
+	case ALLEGRO_KEY_C: duk_push_string(ctx, shift ? "C" : "c"); break;
+	case ALLEGRO_KEY_D: duk_push_string(ctx, shift ? "D" : "d"); break;
+	case ALLEGRO_KEY_E: duk_push_string(ctx, shift ? "E" : "e"); break;
+	case ALLEGRO_KEY_F: duk_push_string(ctx, shift ? "F" : "f"); break;
+	case ALLEGRO_KEY_G: duk_push_string(ctx, shift ? "G" : "g"); break;
+	case ALLEGRO_KEY_H: duk_push_string(ctx, shift ? "H" : "h"); break;
+	case ALLEGRO_KEY_I: duk_push_string(ctx, shift ? "I" : "i"); break;
+	case ALLEGRO_KEY_J: duk_push_string(ctx, shift ? "J" : "j"); break;
+	case ALLEGRO_KEY_K: duk_push_string(ctx, shift ? "K" : "k"); break;
+	case ALLEGRO_KEY_L: duk_push_string(ctx, shift ? "L" : "l"); break;
+	case ALLEGRO_KEY_M: duk_push_string(ctx, shift ? "M" : "m"); break;
+	case ALLEGRO_KEY_N: duk_push_string(ctx, shift ? "N" : "n"); break;
+	case ALLEGRO_KEY_O: duk_push_string(ctx, shift ? "O" : "o"); break;
+	case ALLEGRO_KEY_P: duk_push_string(ctx, shift ? "P" : "p"); break;
+	case ALLEGRO_KEY_Q: duk_push_string(ctx, shift ? "Q" : "q"); break;
+	case ALLEGRO_KEY_R: duk_push_string(ctx, shift ? "R" : "r"); break;
+	case ALLEGRO_KEY_S: duk_push_string(ctx, shift ? "S" : "s"); break;
+	case ALLEGRO_KEY_T: duk_push_string(ctx, shift ? "T" : "t"); break;
+	case ALLEGRO_KEY_U: duk_push_string(ctx, shift ? "U" : "u"); break;
+	case ALLEGRO_KEY_V: duk_push_string(ctx, shift ? "V" : "v"); break;
+	case ALLEGRO_KEY_W: duk_push_string(ctx, shift ? "W" : "w"); break;
+	case ALLEGRO_KEY_X: duk_push_string(ctx, shift ? "X" : "x"); break;
+	case ALLEGRO_KEY_Y: duk_push_string(ctx, shift ? "Y" : "y"); break;
+	case ALLEGRO_KEY_Z: duk_push_string(ctx, shift ? "Z" : "z"); break;
+	case ALLEGRO_KEY_1: duk_push_string(ctx, shift ? "!" : "1"); break;
+	case ALLEGRO_KEY_2: duk_push_string(ctx, shift ? "@" : "2"); break;
+	case ALLEGRO_KEY_3: duk_push_string(ctx, shift ? "#" : "3"); break;
+	case ALLEGRO_KEY_4: duk_push_string(ctx, shift ? "$" : "4"); break;
+	case ALLEGRO_KEY_5: duk_push_string(ctx, shift ? "%" : "5"); break;
+	case ALLEGRO_KEY_6: duk_push_string(ctx, shift ? "^" : "6"); break;
+	case ALLEGRO_KEY_7: duk_push_string(ctx, shift ? "&" : "7"); break;
+	case ALLEGRO_KEY_8: duk_push_string(ctx, shift ? "*" : "8"); break;
+	case ALLEGRO_KEY_9: duk_push_string(ctx, shift ? "(" : "9"); break;
+	case ALLEGRO_KEY_0: duk_push_string(ctx, shift ? ")" : "0"); break;
+	case ALLEGRO_KEY_BACKSLASH: duk_push_string(ctx, shift ? "|" : "\\"); break;
+	case ALLEGRO_KEY_FULLSTOP: duk_push_string(ctx, shift ? ">" : "."); break;
+	case ALLEGRO_KEY_CLOSEBRACE: duk_push_string(ctx, shift ? "}" : "]"); break;
+	case ALLEGRO_KEY_COMMA: duk_push_string(ctx, shift ? "<" : ","); break;
+	case ALLEGRO_KEY_EQUALS: duk_push_string(ctx, shift ? "+" : "="); break;
+	case ALLEGRO_KEY_MINUS: duk_push_string(ctx, shift ? "_" : "-"); break;
+	case ALLEGRO_KEY_QUOTE: duk_push_string(ctx, shift ? "\"" : "'"); break;
+	case ALLEGRO_KEY_OPENBRACE: duk_push_string(ctx, shift ? "{" : "["); break;
+	case ALLEGRO_KEY_SEMICOLON: duk_push_string(ctx, shift ? ":" : ";"); break;
+	case ALLEGRO_KEY_SLASH: duk_push_string(ctx, shift ? "?" : "/"); break;
+	case ALLEGRO_KEY_SPACE: duk_push_string(ctx, " "); break;
+	case ALLEGRO_KEY_TAB: duk_push_string(ctx, "\t"); break;
+	case ALLEGRO_KEY_TILDE: duk_push_string(ctx, shift ? "~" : "`"); break;
+	default:
+		duk_push_string(ctx, "");
+	}
+	return 1;
+}
+
+static duk_ret_t
+js_keys_clearQueue(duk_context* ctx)
+{
+	clear_key_queue();
+	return 0;
+}
+
+static duk_ret_t
+js_keys_read(duk_context* ctx)
+{
+	duk_push_int(ctx, read_key());
+	return 1;
 }
 
 static duk_ret_t
