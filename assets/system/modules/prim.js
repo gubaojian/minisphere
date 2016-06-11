@@ -1,8 +1,10 @@
 /**
- *	prim CommonJS module for Sphere 2.0
+ *	miniRT prim CommonJS module
+ *  convenience module for drawing common graphics primitives
  *	(c) 2015-2016 Fat Cerberus
 **/
 
+'use strict';
 module.exports =
 {
     blit:        blit,
