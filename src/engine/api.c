@@ -41,10 +41,12 @@ static duk_ret_t js_fs_open                    (duk_context* ctx);
 static duk_ret_t js_fs_rename                  (duk_context* ctx);
 static duk_ret_t js_fs_rmdir                   (duk_context* ctx);
 static duk_ret_t js_fs_unlink                  (duk_context* ctx);
+static duk_ret_t js_keyboard_get_capsLock      (duk_context* ctx);
+static duk_ret_t js_keyboard_get_numLock       (duk_context* ctx);
+static duk_ret_t js_keyboard_get_scrollLock    (duk_context* ctx);
 static duk_ret_t js_keyboard_clearQueue        (duk_context* ctx);
 static duk_ret_t js_keyboard_getKey            (duk_context* ctx);
-static duk_ret_t js_keyboard_isKeyDown         (duk_context* ctx);
-static duk_ret_t js_keyboard_isToggled         (duk_context* ctx);
+static duk_ret_t js_keyboard_isDown            (duk_context* ctx);
 static duk_ret_t js_keyboard_keyToChar         (duk_context* ctx);
 static duk_ret_t js_random_chance              (duk_context* ctx);
 static duk_ret_t js_random_normal              (duk_context* ctx);
@@ -306,10 +308,12 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(g_duk, "fs", "rename", js_fs_rename);
 	api_register_static_func(g_duk, "fs", "rmdir", js_fs_rmdir);
 	api_register_static_func(g_duk, "fs", "unlink", js_fs_unlink);
-	api_register_static_func(g_duk, "keyboard", "isKeyDown", js_keyboard_isKeyDown);
-	api_register_static_func(g_duk, "keyboard", "isToggled", js_keyboard_isToggled);
+	api_register_static_prop(g_duk, "keyboard", "capsLock", js_keyboard_get_capsLock, NULL);
+	api_register_static_prop(g_duk, "keyboard", "numLock", js_keyboard_get_numLock, NULL);
+	api_register_static_prop(g_duk, "keyboard", "scrollLock", js_keyboard_get_scrollLock, NULL);
 	api_register_static_func(g_duk, "keyboard", "clearQueue", js_keyboard_clearQueue);
 	api_register_static_func(g_duk, "keyboard", "getKey", js_keyboard_getKey);
+	api_register_static_func(g_duk, "keyboard", "isDown", js_keyboard_isDown);
 	api_register_static_func(g_duk, "keyboard", "keyToChar", js_keyboard_keyToChar);
 	api_register_static_func(g_duk, "random", "chance", js_random_chance);
 	api_register_static_func(g_duk, "random", "normal", js_random_normal);
@@ -1023,29 +1027,11 @@ js_fs_unlink(duk_context* ctx)
 }
 
 static duk_ret_t
-js_keyboard_isKeyDown(duk_context* ctx)
+js_keyboard_isDown(duk_context* ctx)
 {
 	int keycode = duk_require_int(ctx, 0);
 
 	duk_push_boolean(ctx, is_key_down(keycode));
-	return 1;
-}
-
-static duk_ret_t
-js_keyboard_isToggled(duk_context* ctx)
-{
-	int keycode;
-
-	keycode = duk_require_int(ctx, 0);
-
-	if (keycode != ALLEGRO_KEY_CAPSLOCK
-		&& keycode != ALLEGRO_KEY_NUMLOCK
-		&& keycode != ALLEGRO_KEY_SCROLLLOCK)
-	{
-		duk_error_ni(ctx, -1, DUK_ERR_RANGE_ERROR, "invalid toggle key constant");
-	}
-
-	duk_push_boolean(ctx, is_key_toggled(keycode));
 	return 1;
 }
 
@@ -1109,6 +1095,27 @@ js_keyboard_keyToChar(duk_context* ctx)
 	default:
 		duk_push_string(ctx, "");
 	}
+	return 1;
+}
+
+static duk_ret_t
+js_keyboard_get_capsLock(duk_context* ctx)
+{
+	duk_push_boolean(ctx, is_key_toggled(ALLEGRO_KEY_CAPSLOCK));
+	return 1;
+}
+
+static duk_ret_t
+js_keyboard_get_numLock(duk_context* ctx)
+{
+	duk_push_boolean(ctx, is_key_toggled(ALLEGRO_KEY_NUMLOCK));
+	return 1;
+}
+
+static duk_ret_t
+js_keyboard_get_scrollLock(duk_context* ctx)
+{
+	duk_push_boolean(ctx, is_key_toggled(ALLEGRO_KEY_SCROLLLOCK));
 	return 1;
 }
 

@@ -104,17 +104,17 @@ function executeCommand(command)
 
 function getInput()
 {
-	if (!wasKeyDown && keyboard.isKeyDown(Key.Tab)) {
+	if (!wasKeyDown && keyboard.isDown(Key.Tab)) {
 		if (!isVisible())
 			show();
 		else
 			hide();
 	}
-	wasKeyDown = keyboard.isKeyDown(Key.Tab);
+	wasKeyDown = keyboard.isDown(Key.Tab);
 	if (isVisible()) {
-		if (keyboard.isKeyDown(Key.PageUp)) {
+		if (keyboard.isDown(Key.PageUp)) {
 			visible.line = Math.min(visible.line + 0.5, buffer.length - numLines);
-		} else if (keyboard.isKeyDown(Key.PageDown)) {
+		} else if (keyboard.isDown(Key.PageDown)) {
 			visible.line = Math.max(visible.line - 0.5, 0);
 		}
 		var keycode = keyboard.getKey();
@@ -141,8 +141,8 @@ function getInput()
 			case Key.Tab: break;
 			case Key.None: break;
 			default:
-				var ch = keyboard.keyToChar(keycode, keyboard.isKeyDown(Key.LShift));
-				ch = keyboard.isToggled(Key.CapsLock) ? ch.toUpperCase() : ch;
+				var ch = keyboard.keyToChar(keycode, keyboard.isDown(Key.LShift));
+				ch = keyboard.capsLock ? ch.toUpperCase() : ch;
 				entry += ch;
 		}
 	}
