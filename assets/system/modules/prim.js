@@ -1,6 +1,5 @@
 /**
  *	miniRT prim CommonJS module
- *  convenience module for drawing common graphics primitives
  *	(c) 2015-2016 Fat Cerberus
 **/
 
@@ -32,7 +31,7 @@ function blit(surface, x, y, image, mask)
 		{ x: x1, y: y1, u: 0.0, v: 1.0, color: mask },
 		{ x: x2, y: y1, u: 1.0, v: 1.0, color: mask },
 		{ x: x1, y: y2, u: 0.0, v: 0.0, color: mask },
-		{ x: x2, y: y2, u: 1.0, v: 0.0, color: mask }
+		{ x: x2, y: y2, u: 1.0, v: 0.0, color: mask },
 	], image, ShapeType.TriStrip);
 	shape.draw(surface);
 }
@@ -78,9 +77,6 @@ function fill(surface, color)
 
 function line(surface, x1, y1, x2, y2, thickness, color1, color2)
 {
-	assert(thickness >= 1.0, "line thickness is less than 1");
-
-	thickness = thickness >> 0;
 	color2 = color2 || color1;
 
 	var shape;
@@ -95,7 +91,7 @@ function line(surface, x1, y1, x2, y2, thickness, color1, color2)
 		{ x: x1 + tx, y: y1 + ty, color: color1 },
 		{ x: x1 - tx, y: y1 - ty, color: color1 },
 		{ x: x2 - tx, y: y2 - ty, color: color2 },
-		{ x: x2 + tx, y: y2 + ty, color: color2 }
+		{ x: x2 + tx, y: y2 + ty, color: color2 },
 	], null, ShapeType.Fan);
 	shape.draw(surface);
 }
@@ -128,17 +124,12 @@ function lineEllipse(surface, x, y, rx, ry, color)
 
 function lineRect(surface, x, y, width, height, thickness, color)
 {
-	assert(thickness >= 1.0, "line thickness is less than 1");
-
-	thickness = thickness >> 0;
-
-	var x1 = (x >> 0) + 0.5;
-	var y1 = (y >> 0) + 0.5;
-	var x2 = x1 + (width >> 0) - 1;
-	var y2 = y1 + (height >> 0) - 1;
-	var shape;
 	var t = 0.5 * thickness;
-	shape = new Shape([
+	var x1 = x + t;
+	var y1 = y + t;
+	var x2 = x1 + width - thickness;
+	var y2 = y1 + height - thickness;
+	var shape = new Shape([
 		{ x: x1 - t, y: y1 - t, color: color },
 		{ x: x1 + t, y: y1 + t, color: color },
 		{ x: x2 + t, y: y1 - t, color: color },
@@ -150,14 +141,15 @@ function lineRect(surface, x, y, width, height, thickness, color)
 		{ x: x1 - t, y: y1 - t, color: color },
 		{ x: x1 + t, y: y1 + t, color: color },
 	], null, ShapeType.TriStrip);
+	shape.draw(surface);
 }
 
 function point(surface, x, y, color)
 {
-	x = x >> 0;
-	y = y >> 0;
-
-	rect(surface, x, y, 1.0, 1.0, color);
+	var shape = new Shape([
+		{ x: x, y: y, color: color }
+	], null, ShapeType.Points);
+	shape.draw(surface);
 }
 
 function rect(surface, x, y, width, height, color_ul, color_ur, color_lr, color_ll)
@@ -170,7 +162,7 @@ function rect(surface, x, y, width, height, color_ul, color_ur, color_lr, color_
 		{ x: x, y: y, color: color_ul },
 		{ x: x + width, y: y, color: color_ur },
 		{ x: x, y: y + height, color: color_ll },
-		{ x: x + width, y: y + height, color: color_lr }
+		{ x: x + width, y: y + height, color: color_lr },
 	], null, ShapeType.TriStrip);
 	shape.draw(surface);
 }
@@ -183,6 +175,6 @@ function triangle(surface, x1, y1, x2, y2, x3, y3, color1, color2, color3)
 	var shape = new Shape([
 		{ x: x1, y: y1, color: color1 },
 		{ x: x2, y: y2, color: color2 },
-		{ x: x3, y: y3, color: color3 }
+		{ x: x3, y: y3, color: color3 },
 	], null, ShapeType.Triangles);
 }

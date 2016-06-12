@@ -1,6 +1,5 @@
 /**
  *  miniRT music CommonJS module
- *  a stack-based solution for managing background music
  *  (c) 2015-2016 Fat Cerberus
 **/
 
@@ -122,11 +121,11 @@ function push(path, fadeTime)
 function reset(fadeTime)
 {
 	fadeTime = fadeTime !== undefined ? fadeTime : 0.0;
-	
+
 	if (!haveOverride)
 		return;
 	haveOverride = false;
-	
+
 	currentSound.fader.stop();
 	currentSound.fader = new scenes.Scene()
 		.tween(currentSound.stream, fadeTime, 'linear', { volume: 0.0 })
@@ -144,7 +143,7 @@ function reset(fadeTime)
 function _crossfade(path, fadeTime, forceChange)
 {
 	fadeTime = fadeTime !== undefined ? fadeTime : 0.0;
-	
+
 	var allowChange = !haveOverride || forceChange;
 	if (currentSound != null && allowChange) {
 		currentSound.fader.stop();

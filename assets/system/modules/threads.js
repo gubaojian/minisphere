@@ -1,6 +1,5 @@
 /**
  *  miniRT threads CommonJS module
- *  a threading engine for Sphere with an API similar to Pthreads
  *  (c) 2015-2016 Fat Cerberus
 **/
 
@@ -21,14 +20,6 @@ var hasUpdated = false;
 var nextThreadID = 1;
 var threads = [];
 
-// threads.create()
-// create an object thread.  this is the recommended thread creation method.
-// arguments:
-//     entity:   the object for which to create the thread.  this object's .update() method
-//               will be called once per frame, along with .render() and .getInput() if they
-//               exist, until .update() returns false.
-//     priority: optional.  the render priority for the new thread.  higher-priority threads are rendered
-//               later in a frame than lower-priority ones.  ignored if no renderer is provided. (default: 0)
 function create(entity, priority)
 {
 	assert(entity instanceof Object || entity === null, "create() argument must be a valid object");
@@ -46,10 +37,6 @@ function create(entity, priority)
 	});
 }
 
-// threads.isRunning()
-// determine whether a thread is still running.
-// arguments:
-//     threadID: the ID of the thread to check.
 function isRunning(threadID)
 {
 	if (threadID == 0) return false;
@@ -61,11 +48,6 @@ function isRunning(threadID)
 	return false;
 }
 
-// threads.join()
-// Blocks the calling thread until one or more other threads have terminated.
-// arguments:
-//     threadID: either a single thread ID or an array of them.  any invalid thread
-//               ID will cause an error to be thrown.
 function join(threadIDs)
 {
 	threadIDs = threadIDs instanceof Array ? threadIDs : [ threadIDs ];
@@ -79,10 +61,6 @@ function join(threadIDs)
 	}
 }
 
-// threads.kill()
-// forcibly terminate a thread.
-// arguments:
-//     threadID: the ID of the thread to terminate.
 function kill(threadID)
 {
 	link(threads)
@@ -91,11 +69,6 @@ function kill(threadID)
 		.remove();
 }
 
-// threads.self()
-// get the currently executing thread's thread ID.
-// Remarks:
-//     if this function is used outside of a thread update, render or input
-//     handling call, it will return 0 (the ID of the main thread).
 function self()
 {
 	return currentSelf;

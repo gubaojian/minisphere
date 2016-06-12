@@ -1,9 +1,6 @@
 /**
  *  miniRT scenes CommonJS module
- *  advanced scene manager using multiple timelines and cooperative threading
  *  (c) 2015-2016 Fat Cerberus
- *
- *  based on the Scenario cutscene engine originally written for Sphere 1.5
 **/
 
 'use strict';
@@ -361,7 +358,7 @@ defScenelet('fadeTo',
 {
 	start: function(scene, color, duration) {
 		duration = duration !== undefined ? duration : 0.25;
-		
+
 		this.fader = new scenes.Scene()
 			.tween(screenMask, duration, 'linear', color)
 			.run();
@@ -376,7 +373,7 @@ defScenelet('marquee',
 	start: function(scene, text, backgroundColor, color) {
 		if (backgroundColor === undefined) { backgroundColor = new Color(0, 0, 0, 255); }
 		if (color === undefined) { color = new Color(255, 255, 255, 255); }
-		
+
 		this.text = text;
 		this.color = color;
 		this.background = backgroundColor;
@@ -540,7 +537,7 @@ defScenelet('tween',
 				return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
 			},
 			easeInOutBack: function(t, b, c, d, s) {
-				if (s == undefined) s = 1.70158; 
+				if (s == undefined) s = 1.70158;
 				if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
 				return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
 			},

@@ -1,6 +1,5 @@
 /**
  *  miniRT bin CommonJS module
- *  allows loading structured data from binary files based on a JSON schema
  *  (c) 2015-2016 Fat Cerberus
 **/
 
@@ -62,7 +61,7 @@ function _readField(stream, fieldType, data)
 				{
 					break;
 				}
-				checkType = null;					
+				checkType = null;
 			}
 			if (checkType != null)
 				value = _readField(stream, checkType, data);

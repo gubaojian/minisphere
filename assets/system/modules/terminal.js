@@ -1,22 +1,21 @@
 /**
  *  miniRT terminal CommonJS module
- *  an easy-to-integrate debug console for Sphere games
  *  (c) 2015-2016 Fat Cerberus
 **/
 
 'use strict';
 module.exports =
 {
-	isOpen:     isOpen,
-	close:      close,
-	open:       open,
+	isVisible:  isVisible,
+	hide:       hide,
 	print:      print,
 	register:   register,
-	unregister: unregister
+	show:       show,
+	unregister: unregister,
 };
 
-const link    = require('link');
-const prim    = require('prim');
+const link	  = require('link');
+const prim	  = require('prim');
 const scenes  = require('scenes');
 const threads = require('threads');
 
@@ -52,13 +51,6 @@ print("");
 
 function executeCommand(command)
 {
-	// NOTES:
-	//    * Command format is `<entity_name> <instruction> <arg_1> ... <arg_n>`
-	//      e.g.: `cow eat kitties 100`
-	//    * Quoted text (single or double quotes) is treated as a single token.
-	//    * Numeric arguments are converted to actual JS numbers before being passed to an
-	//      instruction method.
-
 	// tokenize the command string
 	var tokens = command.match(/'.*?'|".*?"|\S+/g);
 	if (tokens == null) return;
@@ -113,13 +105,13 @@ function executeCommand(command)
 function getInput()
 {
 	if (!wasKeyDown && keyboard.isKeyDown(Key.Tab)) {
-		if (!isOpen())
-			open();
+		if (!isVisible())
+			show();
 		else
-			close();
+			hide();
 	}
 	wasKeyDown = keyboard.isKeyDown(Key.Tab);
-	if (isOpen()) {
+	if (isVisible()) {
 		if (keyboard.isKeyDown(Key.PageUp)) {
 			visible.line = Math.min(visible.line + 0.5, buffer.length - numLines);
 		} else if (keyboard.isKeyDown(Key.PageDown)) {
@@ -197,18 +189,12 @@ function update()
 	return true;
 }
 
-// terminal.isOpen()
-// determine whether the console is currently displayed or not.
-// returns:
-//     true if the console is open, false otherwise.
-function isOpen()
+function isVisible()
 {
 	return visible.yes;
 }
 
-// terminal.close()
-// close the console, hiding it from view.
-function close()
+function hide()
 {
 	new scenes.Scene()
 		.tween(visible, 0.25, 'easeInQuad', { fade: 0.0 })
@@ -216,8 +202,6 @@ function close()
 		.run();
 }
 
-// terminal.print()
-// print a line of text to the terminal.
 function print(/*...*/)
 {
 	var lineInBuffer = nextLine % bufferSize;
@@ -230,24 +214,6 @@ function print(/*...*/)
 	console.log(buffer[lineInBuffer]);
 }
 
-// terminal.open()
-// open the terminal, making it visible to the player.
-function open()
-{
-	new scenes.Scene()
-		.tween(visible, 0.25, 'easeOutQuad', { fade: 1.0 })
-		.call(function() { visible.yes = true; })
-		.run();
-}
-
-// terminal.register()
-// register a named entity with the terminal.
-// arguments:
-//     name:    the name of the entity.	 this should not contain spaces.
-//     that:    the value which will be bound to `this` when one of the entity's methods is executed.
-//     methods: an associative array of functions, keyed by name, defining the valid operations
-//              for this entity.  one-word names are recommended and as with the entity name,
-//              should not contain spaces.
 function register(name, that, methods)
 {
 	for (var instruction in methods) {
@@ -260,10 +226,14 @@ function register(name, that, methods)
 	}
 }
 
-// terminal.unregister()
-// unregister all commands for a previously-registered entity.
-// arguments:
-//     name: the name of the entity as passed to terminal.register().
+function show()
+{
+	new scenes.Scene()
+		.tween(visible, 0.25, 'easeOutQuad', { fade: 1.0 })
+		.call(function() { visible.yes = true; })
+		.run();
+}
+
 function unregister(name)
 {
 	commands = link(commands)

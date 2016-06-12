@@ -1,6 +1,5 @@
 /**
- *  miniRT/pacts CommonJS module
- *  easy-to-use promises for Sphere, based on Promises/A+
+ *  miniRT pacts CommonJS module
  *  (c) 2015-2016 Fat Cerberus
 **/
 
