@@ -141,7 +141,7 @@ function getInput()
 			case Key.Tab: break;
 			case Key.None: break;
 			default:
-				var ch = keyboard.keyToChar(keycode, keyboard.isDown(Key.LShift));
+				var ch = keyboard.keyChar(keycode, keyboard.isDown(Key.LShift));
 				ch = keyboard.capsLock ? ch.toUpperCase() : ch;
 				entry += ch;
 		}

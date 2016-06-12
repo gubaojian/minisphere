@@ -37,57 +37,27 @@ shutdown_keyboard(void)
 	al_uninstall_keyboard();
 }
 
-bool
-is_any_key_down(void)
+int
+kb_num_keys(void)
 {
-	int i;
-
-	update_keyboard();
-	for (i = 0; i < ALLEGRO_KEY_MAX; ++i)
-		if (s_key_state[i]) return true;
-	return false;
-}
-
-bool
-is_key_down(int keycode)
-{
-	update_keyboard();
-	return s_key_state[keycode];
-}
-
-bool
-is_key_toggled(int keycode)
-{
-	int flag;
-	
-	flag = keycode == ALLEGRO_KEY_CAPSLOCK ? ALLEGRO_KEYMOD_CAPSLOCK
-		: keycode == ALLEGRO_KEY_NUMLOCK ? ALLEGRO_KEYMOD_NUMLOCK
-		: keycode == ALLEGRO_KEY_SCROLLLOCK ? ALLEGRO_KEYMOD_SCROLLLOCK
-		: 0x0;
-	return (s_keymod_state & flag) != 0;
+	return s_key_queue.num_keys;
 }
 
 void
-attach_input_display(void)
+kb_attach_display(void)
 {
 	al_register_event_source(s_events,
 		al_get_display_event_source(screen_display(g_screen)));
 }
 
 void
-clear_key_queue(void)
+kb_clear_queue(void)
 {
 	s_key_queue.num_keys = 0;
 }
 
 int
-get_num_keys(void)
-{
-	return s_key_queue.num_keys;
-}
-
-int
-read_key(void)
+kb_get_key(void)
 {
 	int keycode;
 	
@@ -99,8 +69,38 @@ read_key(void)
 	return keycode;
 }
 
+bool
+kb_is_any_key_down(void)
+{
+	int i;
+
+	kb_update();
+	for (i = 0; i < ALLEGRO_KEY_MAX; ++i)
+		if (s_key_state[i]) return true;
+	return false;
+}
+
+bool
+kb_is_key_down(int keycode)
+{
+	kb_update();
+	return s_key_state[keycode];
+}
+
+bool
+kb_is_toggled(int keycode)
+{
+	int flag;
+
+	flag = keycode == ALLEGRO_KEY_CAPSLOCK ? ALLEGRO_KEYMOD_CAPSLOCK
+		: keycode == ALLEGRO_KEY_NUMLOCK ? ALLEGRO_KEYMOD_NUMLOCK
+		: keycode == ALLEGRO_KEY_SCROLLLOCK ? ALLEGRO_KEYMOD_SCROLLLOCK
+		: 0x0;
+	return (s_keymod_state & flag) != 0;
+}
+
 void
-update_keyboard(void)
+kb_update(void)
 {
 	ALLEGRO_EVENT          event;
 	int                    keycode;

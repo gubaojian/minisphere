@@ -23,6 +23,13 @@ static const char* const SPHERE_EXTENSIONS[] =
 	"sphere_fs_system_alias",
 };
 
+static duk_ret_t js_console_assert             (duk_context* ctx);
+static duk_ret_t js_console_debug              (duk_context* ctx);
+static duk_ret_t js_console_error              (duk_context* ctx);
+static duk_ret_t js_console_info               (duk_context* ctx);
+static duk_ret_t js_console_log                (duk_context* ctx);
+static duk_ret_t js_console_trace              (duk_context* ctx);
+static duk_ret_t js_console_warn               (duk_context* ctx);
 static duk_ret_t js_engine_get_apiLevel        (duk_context* ctx);
 static duk_ret_t js_engine_get_apiVersion      (duk_context* ctx);
 static duk_ret_t js_engine_get_extensions      (duk_context* ctx);
@@ -47,7 +54,7 @@ static duk_ret_t js_keyboard_get_scrollLock    (duk_context* ctx);
 static duk_ret_t js_keyboard_clearQueue        (duk_context* ctx);
 static duk_ret_t js_keyboard_getKey            (duk_context* ctx);
 static duk_ret_t js_keyboard_isDown            (duk_context* ctx);
-static duk_ret_t js_keyboard_keyToChar         (duk_context* ctx);
+static duk_ret_t js_keyboard_keyChar           (duk_context* ctx);
 static duk_ret_t js_random_chance              (duk_context* ctx);
 static duk_ret_t js_random_normal              (duk_context* ctx);
 static duk_ret_t js_random_random              (duk_context* ctx);
@@ -290,6 +297,13 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(ctx, NULL, "alert", js_alert);
 	api_register_static_func(ctx, NULL, "assert", js_assert);
 
+	api_register_static_func(g_duk, "console", "assert", js_console_assert);
+	api_register_static_func(g_duk, "console", "debug", js_console_debug);
+	api_register_static_func(g_duk, "console", "error", js_console_error);
+	api_register_static_func(g_duk, "console", "info", js_console_info);
+	api_register_static_func(g_duk, "console", "log", js_console_log);
+	api_register_static_func(g_duk, "console", "trace", js_console_trace);
+	api_register_static_func(g_duk, "console", "warn", js_console_warn);
 	api_register_static_prop(ctx, "engine", "apiLevel", js_engine_get_apiLevel, NULL);
 	api_register_static_prop(ctx, "engine", "apiVersion", js_engine_get_apiVersion, NULL);
 	api_register_static_prop(ctx, "engine", "extensions", js_engine_get_extensions, NULL);
@@ -314,7 +328,7 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(g_duk, "keyboard", "clearQueue", js_keyboard_clearQueue);
 	api_register_static_func(g_duk, "keyboard", "getKey", js_keyboard_getKey);
 	api_register_static_func(g_duk, "keyboard", "isDown", js_keyboard_isDown);
-	api_register_static_func(g_duk, "keyboard", "keyToChar", js_keyboard_keyToChar);
+	api_register_static_func(g_duk, "keyboard", "keyChar", js_keyboard_keyChar);
 	api_register_static_func(g_duk, "random", "chance", js_random_chance);
 	api_register_static_func(g_duk, "random", "normal", js_random_normal);
 	api_register_static_func(g_duk, "random", "random", js_random_random);
@@ -438,10 +452,18 @@ initialize_api(duk_context* ctx)
 	api_register_const(g_duk, "ShapeType", "Triangles", SHAPE_TRIANGLES);
 	api_register_const(g_duk, "ShapeType", "TriStrip", SHAPE_TRI_STRIP);
 
+	// `console` is a Proxy so that unimplemented methods do not throw
+	duk_eval_string_noresult(g_duk,
+		"global.console = new Proxy(global.console, {\n"
+		"    get: function(t, name) {\n"
+		"        return name in t ? t[name] : function() {};\n"
+		"    }\n"
+		"});"
+	);
+
 	// initialize subsystem APIs
 	init_color_api();
 	init_commonjs_api();
-	init_console_api();
 }
 
 void
@@ -830,21 +852,113 @@ duk_require_sphere_obj(duk_context* ctx, duk_idx_t index, const char* ctor_name)
 }
 
 static duk_ret_t
-js_engine_get_game(duk_context* ctx)
+js_console_assert(duk_context* ctx)
 {
-	duk_push_lstring_t(ctx, get_game_manifest(g_fs));
-	duk_json_decode(ctx, -1);
+	const char* message;
+	bool        result;
 
-	duk_push_this(ctx);
-	duk_push_string(ctx, "game");
-	duk_dup(ctx, -3);
-	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
-		| DUK_DEFPROP_CLEAR_ENUMERABLE
-		| DUK_DEFPROP_CLEAR_WRITABLE
-		| DUK_DEFPROP_SET_CONFIGURABLE);
-	duk_pop(ctx);
+	result = duk_to_boolean(ctx, 0);
+	message = duk_safe_to_string(ctx, 1);
 
-	return 1;
+	if (!result)
+		debug_print(message, PRINT_ASSERT);
+	return 0;
+}
+
+static duk_ret_t
+js_console_debug(duk_context* ctx)
+{
+	int num_items;
+
+	// join the passed-in arguments separated with spaces
+	num_items = duk_get_top(ctx);
+	duk_push_string(ctx, " ");
+	duk_insert(ctx, 0);
+	duk_join(ctx, num_items);
+
+	debug_print(duk_get_string(ctx, -1), PRINT_DEBUG);
+	return 0;
+}
+
+static duk_ret_t
+js_console_error(duk_context* ctx)
+{
+	int num_items;
+
+	// join the passed-in arguments separated with spaces
+	num_items = duk_get_top(ctx);
+	duk_push_string(ctx, " ");
+	duk_insert(ctx, 0);
+	duk_join(ctx, num_items);
+
+	debug_print(duk_get_string(ctx, -1), PRINT_ERROR);
+	return 0;
+}
+
+static duk_ret_t
+js_console_info(duk_context* ctx)
+{
+	int num_items;
+
+	// join the passed-in arguments separated with spaces
+	num_items = duk_get_top(ctx);
+	duk_push_string(ctx, " ");
+	duk_insert(ctx, 0);
+	duk_join(ctx, num_items);
+
+	debug_print(duk_get_string(ctx, -1), PRINT_INFO);
+	return 0;
+}
+
+static duk_ret_t
+js_console_log(duk_context* ctx)
+{
+	// note: console.log() does not currently support format specifiers.
+	//       this may change in a future implementation.
+
+	int num_items;
+
+	// join the passed-in arguments separated with spaces
+	num_items = duk_get_top(ctx);
+	duk_push_string(ctx, " ");
+	duk_insert(ctx, 0);
+	duk_join(ctx, num_items);
+
+	debug_print(duk_get_string(ctx, -1), PRINT_NORMAL);
+	return 0;
+}
+
+static duk_ret_t
+js_console_trace(duk_context* ctx)
+{
+	// note: console.log() does not currently support format specifiers.
+	//       this may change in a future implementation.
+
+	int num_items;
+
+	// join the passed-in arguments separated with spaces
+	num_items = duk_get_top(ctx);
+	duk_push_string(ctx, " ");
+	duk_insert(ctx, 0);
+	duk_join(ctx, num_items);
+
+	debug_print(duk_get_string(ctx, -1), PRINT_TRACE);
+	return 0;
+}
+
+static duk_ret_t
+js_console_warn(duk_context* ctx)
+{
+	int num_items;
+
+	// join the passed-in arguments separated with spaces
+	num_items = duk_get_top(ctx);
+	duk_push_string(ctx, " ");
+	duk_insert(ctx, 0);
+	duk_join(ctx, num_items);
+
+	debug_print(duk_get_string(ctx, -1), PRINT_WARN);
+	return 0;
 }
 
 static duk_ret_t
@@ -879,6 +993,24 @@ js_engine_get_extensions(duk_context* ctx)
 
 	duk_push_this(ctx);
 	duk_push_string(ctx, "extensions");
+	duk_dup(ctx, -3);
+	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
+		| DUK_DEFPROP_CLEAR_ENUMERABLE
+		| DUK_DEFPROP_CLEAR_WRITABLE
+		| DUK_DEFPROP_SET_CONFIGURABLE);
+	duk_pop(ctx);
+
+	return 1;
+}
+
+static duk_ret_t
+js_engine_get_game(duk_context* ctx)
+{
+	duk_push_lstring_t(ctx, get_game_manifest(g_fs));
+	duk_json_decode(ctx, -1);
+
+	duk_push_this(ctx);
+	duk_push_string(ctx, "game");
 	duk_dup(ctx, -3);
 	duk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE
 		| DUK_DEFPROP_CLEAR_ENUMERABLE
@@ -1031,12 +1163,12 @@ js_keyboard_isDown(duk_context* ctx)
 {
 	int keycode = duk_require_int(ctx, 0);
 
-	duk_push_boolean(ctx, is_key_down(keycode));
+	duk_push_boolean(ctx, kb_is_key_down(keycode));
 	return 1;
 }
 
 static duk_ret_t
-js_keyboard_keyToChar(duk_context* ctx)
+js_keyboard_keyChar(duk_context* ctx)
 {
 	int n_args = duk_get_top(ctx);
 	int keycode = duk_require_int(ctx, 0);
@@ -1101,35 +1233,35 @@ js_keyboard_keyToChar(duk_context* ctx)
 static duk_ret_t
 js_keyboard_get_capsLock(duk_context* ctx)
 {
-	duk_push_boolean(ctx, is_key_toggled(ALLEGRO_KEY_CAPSLOCK));
+	duk_push_boolean(ctx, kb_is_toggled(ALLEGRO_KEY_CAPSLOCK));
 	return 1;
 }
 
 static duk_ret_t
 js_keyboard_get_numLock(duk_context* ctx)
 {
-	duk_push_boolean(ctx, is_key_toggled(ALLEGRO_KEY_NUMLOCK));
+	duk_push_boolean(ctx, kb_is_toggled(ALLEGRO_KEY_NUMLOCK));
 	return 1;
 }
 
 static duk_ret_t
 js_keyboard_get_scrollLock(duk_context* ctx)
 {
-	duk_push_boolean(ctx, is_key_toggled(ALLEGRO_KEY_SCROLLLOCK));
+	duk_push_boolean(ctx, kb_is_toggled(ALLEGRO_KEY_SCROLLLOCK));
 	return 1;
 }
 
 static duk_ret_t
 js_keyboard_clearQueue(duk_context* ctx)
 {
-	clear_key_queue();
+	kb_clear_queue();
 	return 0;
 }
 
 static duk_ret_t
 js_keyboard_getKey(duk_context* ctx)
 {
-	duk_push_int(ctx, read_key());
+	duk_push_int(ctx, kb_get_key());
 	return 1;
 }
 

@@ -201,7 +201,7 @@ main(int argc, char* argv[])
 	g_events = al_create_event_queue();
 	al_register_event_source(g_events,
 		al_get_display_event_source(screen_display(g_screen)));
-	attach_input_display();
+	kb_attach_display();
 
 	// initialize shader support
 	initialize_shaders(screen_have_shaders(g_screen));
@@ -301,7 +301,7 @@ do_events(void)
 #endif
 
 	update_async();
-	update_keyboard();
+	kb_update();
 	update_audio();
 
 	// process Allegro events
