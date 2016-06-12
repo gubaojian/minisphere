@@ -359,7 +359,7 @@ defScenelet('fadeTo',
 	start: function(scene, color, duration) {
 		duration = duration !== undefined ? duration : 0.25;
 
-		this.fader = new scenes.Scene()
+		this.fader = new Scene()
 			.tween(screenMask, duration, 'linear', color)
 			.run();
 	},
@@ -371,19 +371,19 @@ defScenelet('fadeTo',
 defScenelet('marquee',
 {
 	start: function(scene, text, backgroundColor, color) {
-		if (backgroundColor === undefined) { backgroundColor = new Color(0, 0, 0, 255); }
-		if (color === undefined) { color = new Color(255, 255, 255, 255); }
+		backgroundColor = backgroundColor || Color.Black;
+		color = color || Color.White;
 
 		this.text = text;
 		this.color = color;
 		this.background = backgroundColor;
 		this.font = Font.Default;
 		this.windowSize = screen.width + this.font.getStringWidth(this.text);
-		this.height = this.font.getHeight() + 10;
-		this.textHeight = this.font.getHeight();
+		this.height = this.font.height + 10;
+		this.textHeight = this.font.height;
 		this.fadeness = 0.0;
 		this.scroll = 0.0;
-		this.animation = new scenes.Scene()
+		this.animation = new Scene()
 			.tween(this, 0.25, 'linear', { fadeness: 1.0 })
 			.tween(this, 1.0, 'easeOutExpo', { scroll: 0.5 })
 			.tween(this, 1.0, 'easeInExpo', { scroll: 1.0 })

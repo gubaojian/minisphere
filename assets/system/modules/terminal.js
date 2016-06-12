@@ -32,7 +32,7 @@ var prompt = "$";
 var buffer = [];
 var commands = [];
 var entry = "";
-var cursorColor = new Color(255, 255, 128, 255);
+var cursorColor = Color.Gold;
 new scenes.Scene()
 	.doWhile(function() { return true; })
 		.tween(cursorColor, 0.25, 'easeInSine', { alpha: 255 })
@@ -46,7 +46,7 @@ threads.create({
 }, Infinity);
 
 print(engine.game.name + " Console");
-print(engine.name + " " + engine.version + " / API v" + engine.apiVersion + " Lv." + engine.apiLevel);
+print(engine.name + " " + engine.version + " (API v" + engine.apiVersion + " Lv." + engine.apiLevel + ")");
 print("");
 
 function executeCommand(command)
@@ -160,13 +160,13 @@ function render()
 	font.drawText(screen, 6, 6 + boxY, prompt, Color.Black.fade(visible.fade * 192));
 	font.drawText(screen, 5, 5 + boxY, prompt, Color.Gray.fade(visible.fade * 192));
 	font.drawText(screen, 6 + promptWidth, 6 + boxY, entry, Color.Black.fade(visible.fade * 192));
-	font.drawText(screen, 5 + promptWidth, 5 + boxY, entry, new Color(255, 255, 128, visible.fade * 192));
+	font.drawText(screen, 5 + promptWidth, 5 + boxY, entry, Color.Gold.fade(visible.fade * 192));
 	font.drawText(screen, 5 + promptWidth + font.getStringWidth(entry), 5 + boxY, "_", cursorColor);
 
 	// ...then the console output
 	var boxHeight = numLines * font.height + 10;
 	var boxY = screen.height - boxHeight * visible.fade;
-	prim.rect(screen, 0, boxY, screen.width, boxHeight, new Color(0, 0, 0, visible.fade * 192));
+	prim.rect(screen, 0, boxY, screen.width, boxHeight, Color.Black.fade(visible.fade * 192));
 	screen.clipTo(5, boxY + 5, screen.width - 10, boxHeight - 10);
 	for (var i = -1; i < numLines + 1; ++i) {
 		var lineToDraw = (nextLine - numLines) + i - Math.floor(visible.line);
