@@ -78,30 +78,25 @@ function fill(surface, color)
 
 function line(surface, x1, y1, x2, y2, thickness, color1, color2)
 {
+	assert(thickness >= 1.0, "line thickness is less than 1");
+
+	thickness = thickness >> 0;
 	color2 = color2 || color1;
 
 	var shape;
-	if (thickness <= 0.0) {
-		shape = new Shape([
-			{ x: x1, y: y1, color: color1 },
-			{ x: x2, y: y2, color: color2 }
-		], null, ShapeType.Lines);
-	}
-	else {
-		var xSize = x2 - x1;
-		var ySize = y2 - y1;
-		var length = Math.sqrt(xSize*xSize + ySize*ySize);
-		if (length == 0.0)
-			return;
-		var tx = 0.5 * thickness * (y2 - y1) / length;
-		var ty = 0.5 * thickness * -(x2 - x1) / length;
-		shape = new Shape([
-			{ x: x1 + tx, y: y1 + ty, color: color1 },
-			{ x: x1 - tx, y: y1 - ty, color: color1 },
-			{ x: x2 - tx, y: y2 - ty, color: color2 },
-			{ x: x2 + tx, y: y2 + ty, color: color2 }
-		], null, ShapeType.Fan);
-	}
+	var xSize = x2 - x1;
+	var ySize = y2 - y1;
+	var length = Math.sqrt(xSize*xSize + ySize*ySize);
+	if (length == 0.0)
+		return;
+	var tx = 0.5 * thickness * (y2 - y1) / length;
+	var ty = 0.5 * thickness * -(x2 - x1) / length;
+	shape = new Shape([
+		{ x: x1 + tx, y: y1 + ty, color: color1 },
+		{ x: x1 - tx, y: y1 - ty, color: color1 },
+		{ x: x2 - tx, y: y2 - ty, color: color2 },
+		{ x: x2 + tx, y: y2 + ty, color: color2 }
+	], null, ShapeType.Fan);
 	shape.draw(surface);
 }
 
@@ -131,48 +126,38 @@ function lineEllipse(surface, x, y, rx, ry, color)
 	shape.draw(surface);
 }
 
-function lineRect(surface, x, y, width, height, color, thickness)
+function lineRect(surface, x, y, width, height, thickness, color)
 {
-	if (thickness === undefined)
-		thickness = 1.0;
+	assert(thickness >= 1.0, "line thickness is less than 1");
+
+	thickness = thickness >> 0;
 
 	var x1 = (x >> 0) + 0.5;
 	var y1 = (y >> 0) + 0.5;
 	var x2 = x1 + (width >> 0) - 1;
 	var y2 = y1 + (height >> 0) - 1;
 	var shape;
-	if (thickness <= 0.0) {
-		shape = new Shape([
-			{ x: x1, y: y1, color: color },
-			{ x: x2, y: y1, color: color },
-			{ x: x2, y: y2, color: color },
-			{ x: x1, y: y2, color: color },
-		], null, ShapeType.LineLoop);
-	}
-	else {
-		var t = 0.5 * thickness;
-		shape = new Shape([
-			{ x: x1 - t, y: y1 - t, color: color },
-			{ x: x1 + t, y: y1 + t, color: color },
-			{ x: x2 + t, y: y1 - t, color: color },
-			{ x: x2 - t, y: y1 + t, color: color },
-			{ x: x2 + t, y: y2 + t, color: color },
-			{ x: x2 - t, y: y2 - t, color: color },
-			{ x: x1 - t, y: y2 + t, color: color },
-			{ x: x1 + t, y: y2 - t, color: color },
-			{ x: x1 - t, y: y1 - t, color: color },
-			{ x: x1 + t, y: y1 + t, color: color },
-		], null, ShapeType.TriStrip);
-	}
-	shape.draw(surface);
+	var t = 0.5 * thickness;
+	shape = new Shape([
+		{ x: x1 - t, y: y1 - t, color: color },
+		{ x: x1 + t, y: y1 + t, color: color },
+		{ x: x2 + t, y: y1 - t, color: color },
+		{ x: x2 - t, y: y1 + t, color: color },
+		{ x: x2 + t, y: y2 + t, color: color },
+		{ x: x2 - t, y: y2 - t, color: color },
+		{ x: x1 - t, y: y2 + t, color: color },
+		{ x: x1 + t, y: y2 - t, color: color },
+		{ x: x1 - t, y: y1 - t, color: color },
+		{ x: x1 + t, y: y1 + t, color: color },
+	], null, ShapeType.TriStrip);
 }
 
 function point(surface, x, y, color)
 {
-	var shape = new Shape([
-		{ x: x, y: y, color: color }
-	], null, ShapeType.Points);
-	shape.draw(surface);
+	x = x >> 0;
+	y = y >> 0;
+
+	rect(surface, x, y, 1.0, 1.0, color);
 }
 
 function rect(surface, x, y, width, height, color_ul, color_ur, color_lr, color_ll)

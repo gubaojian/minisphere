@@ -112,20 +112,20 @@ function executeCommand(command)
 
 function getInput()
 {
-	if (!wasKeyDown && keys.isDown(Key.Tab)) {
+	if (!wasKeyDown && keyboard.isKeyDown(Key.Tab)) {
 		if (!isOpen())
 			open();
 		else
 			close();
 	}
-	wasKeyDown = keys.isDown(Key.Tab);
+	wasKeyDown = keyboard.isKeyDown(Key.Tab);
 	if (isOpen()) {
-		if (keys.isDown(Key.PageUp)) {
+		if (keyboard.isKeyDown(Key.PageUp)) {
 			visible.line = Math.min(visible.line + 0.5, buffer.length - numLines);
-		} else if (keys.isDown(Key.PageDown)) {
+		} else if (keyboard.isKeyDown(Key.PageDown)) {
 			visible.line = Math.max(visible.line - 0.5, 0);
 		}
-		var keycode = keys.numKeys > 0 ? keys.read() : null;
+		var keycode = keyboard.getKey();
 		switch (keycode) {
 			case Key.Enter:
 				print("Command entered: '" + entry + "'");
@@ -147,10 +147,10 @@ function getInput()
 					.run();
 				break;
 			case Key.Tab: break;
-			case null: break;
+			case Key.None: break;
 			default:
-				var ch = keys.charFromKey(keycode, keys.isDown(Key.LShift));
-				ch = keys.isToggled(Key.CapsLock) ? ch.toUpperCase() : ch;
+				var ch = keyboard.keyToChar(keycode, keyboard.isKeyDown(Key.LShift));
+				ch = keyboard.isToggled(Key.CapsLock) ? ch.toUpperCase() : ch;
 				entry += ch;
 		}
 	}

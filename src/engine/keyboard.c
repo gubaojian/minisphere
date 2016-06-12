@@ -91,8 +91,8 @@ read_key(void)
 {
 	int keycode;
 	
-	while (s_key_queue.num_keys == 0)
-		do_events();
+	if (s_key_queue.num_keys == 0)
+		return 0;
 	keycode = s_key_queue.keys[0];
 	--s_key_queue.num_keys;
 	memmove(s_key_queue.keys, &s_key_queue.keys[1], sizeof(int) * s_key_queue.num_keys);

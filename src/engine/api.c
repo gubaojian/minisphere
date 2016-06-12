@@ -41,12 +41,11 @@ static duk_ret_t js_fs_open                    (duk_context* ctx);
 static duk_ret_t js_fs_rename                  (duk_context* ctx);
 static duk_ret_t js_fs_rmdir                   (duk_context* ctx);
 static duk_ret_t js_fs_unlink                  (duk_context* ctx);
-static duk_ret_t js_keys_get_numKeys           (duk_context* ctx);
-static duk_ret_t js_keys_charFromKey           (duk_context* ctx);
-static duk_ret_t js_keys_clearQueue            (duk_context* ctx);
-static duk_ret_t js_keys_isDown                (duk_context* ctx);
-static duk_ret_t js_keys_isToggled             (duk_context* ctx);
-static duk_ret_t js_keys_read                  (duk_context* ctx);
+static duk_ret_t js_keyboard_clearQueue        (duk_context* ctx);
+static duk_ret_t js_keyboard_getKey            (duk_context* ctx);
+static duk_ret_t js_keyboard_isKeyDown         (duk_context* ctx);
+static duk_ret_t js_keyboard_isToggled         (duk_context* ctx);
+static duk_ret_t js_keyboard_keyToChar         (duk_context* ctx);
 static duk_ret_t js_random_chance              (duk_context* ctx);
 static duk_ret_t js_random_normal              (duk_context* ctx);
 static duk_ret_t js_random_random              (duk_context* ctx);
@@ -307,12 +306,11 @@ initialize_api(duk_context* ctx)
 	api_register_static_func(g_duk, "fs", "rename", js_fs_rename);
 	api_register_static_func(g_duk, "fs", "rmdir", js_fs_rmdir);
 	api_register_static_func(g_duk, "fs", "unlink", js_fs_unlink);
-	api_register_static_prop(g_duk, "keys", "numKeys", js_keys_get_numKeys, NULL);
-	api_register_static_func(g_duk, "keys", "isDown", js_keys_isDown);
-	api_register_static_func(g_duk, "keys", "isToggled", js_keys_isToggled);
-	api_register_static_func(g_duk, "keys", "charFromKey", js_keys_charFromKey);
-	api_register_static_func(g_duk, "keys", "clearQueue", js_keys_clearQueue);
-	api_register_static_func(g_duk, "keys", "read", js_keys_read);
+	api_register_static_func(g_duk, "keyboard", "isKeyDown", js_keyboard_isKeyDown);
+	api_register_static_func(g_duk, "keyboard", "isToggled", js_keyboard_isToggled);
+	api_register_static_func(g_duk, "keyboard", "clearQueue", js_keyboard_clearQueue);
+	api_register_static_func(g_duk, "keyboard", "getKey", js_keyboard_getKey);
+	api_register_static_func(g_duk, "keyboard", "keyToChar", js_keyboard_keyToChar);
 	api_register_static_func(g_duk, "random", "chance", js_random_chance);
 	api_register_static_func(g_duk, "random", "normal", js_random_normal);
 	api_register_static_func(g_duk, "random", "random", js_random_random);
@@ -1025,15 +1023,7 @@ js_fs_unlink(duk_context* ctx)
 }
 
 static duk_ret_t
-js_keys_get_numKeys(duk_context* ctx)
-{
-	update_keyboard();
-	duk_push_int(ctx, get_num_keys());
-	return 1;
-}
-
-static duk_ret_t
-js_keys_isDown(duk_context* ctx)
+js_keyboard_isKeyDown(duk_context* ctx)
 {
 	int keycode = duk_require_int(ctx, 0);
 
@@ -1042,7 +1032,7 @@ js_keys_isDown(duk_context* ctx)
 }
 
 static duk_ret_t
-js_keys_isToggled(duk_context* ctx)
+js_keyboard_isToggled(duk_context* ctx)
 {
 	int keycode;
 
@@ -1060,7 +1050,7 @@ js_keys_isToggled(duk_context* ctx)
 }
 
 static duk_ret_t
-js_keys_charFromKey(duk_context* ctx)
+js_keyboard_keyToChar(duk_context* ctx)
 {
 	int n_args = duk_get_top(ctx);
 	int keycode = duk_require_int(ctx, 0);
@@ -1123,14 +1113,14 @@ js_keys_charFromKey(duk_context* ctx)
 }
 
 static duk_ret_t
-js_keys_clearQueue(duk_context* ctx)
+js_keyboard_clearQueue(duk_context* ctx)
 {
 	clear_key_queue();
 	return 0;
 }
 
 static duk_ret_t
-js_keys_read(duk_context* ctx)
+js_keyboard_getKey(duk_context* ctx)
 {
 	duk_push_int(ctx, read_key());
 	return 1;
